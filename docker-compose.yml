@@ -1,10 +1,10 @@
 version: '3.8'
 
 services:
-  remainders:
+  subscriptions:
     build: .
-    image: remainders-app
-    container_name: remainders
+    image: subscriptions-app
+    container_name: subscriptions
     restart: unless-stopped
     ports:
       - "5000:5000"

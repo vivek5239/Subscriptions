@@ -1,4 +1,4 @@
-# Remainders
+# Subscriptions
 
 A modern subscription management dashboard to track your recurring expenses, analyze costs, and never miss a payment.
 
@@ -54,10 +54,10 @@ To push this image to Docker Hub (e.g., for your server):
 
 ```bash
 # Build the image
-docker build -t your-username/remainders:latest .
+docker build -t your-username/subscriptions:latest .
 
 # Push to Docker Hub
-docker push your-username/remainders:latest
+docker push your-username/subscriptions:latest
 ```
 
 ## Configuration

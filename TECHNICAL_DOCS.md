@@ -1,8 +1,8 @@
-# Technical Documentation: Remainders
+# Technical Documentation: Subscriptions
 
 ## 1. Architecture Overview
 
-**Remainders** is a full-stack web application designed to track and manage recurring subscriptions. It follows a **Monolithic Repository (Monorepo)** structure but separates concerns into a distinct Client (Frontend) and Server (Backend).
+**Subscriptions** is a full-stack web application designed to track and manage recurring subscriptions. It follows a **Monolithic Repository (Monorepo)** structure but separates concerns into a distinct Client (Frontend) and Server (Backend).
 
 *   **Frontend**: Single Page Application (SPA) built with React and TypeScript.
 *   **Backend**: RESTful API built with Node.js and Express.
@@ -42,7 +42,7 @@
 ## 4. Directory Structure
 
 ```text
-Remainders/
+Subscriptions/
 ├── client/                 # React Frontend
 │   ├── src/
 │   │   ├── App.tsx         # Main Component (Dashboard Logic)
