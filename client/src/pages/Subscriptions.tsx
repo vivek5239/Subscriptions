@@ -1,12 +1,16 @@
 import { useEffect, useState } from 'react';
 import axios from 'axios';
-import { Card, Table, Container, Badge, Spinner } from 'react-bootstrap';
+import { Card, Table, Container, Badge, Spinner, Button, Stack } from 'react-bootstrap';
+import { Plus, Edit2, Trash2 } from 'lucide-react';
 import { Subscription } from '../types';
 import { Logo } from '../components/Logo';
+import SubscriptionModal from '../components/SubscriptionModal';
 
 export default function Subscriptions() {
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showModal, setShowModal] = useState(false);
+  const [selectedSub, setSelectedSub] = useState<Subscription | null>(null);
 
   useEffect(() => {
     fetchData();
@@ -23,14 +27,47 @@ export default function Subscriptions() {
     }
   };
 
+  const handleSave = async (subData: Partial<Subscription>) => {
+    try {
+      await axios.post('http://localhost:5000/api/subscriptions', subData);
+      fetchData();
+    } catch (err) {
+      console.error('Error saving subscription:', err);
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!window.confirm('Are you sure you want to delete this subscription?')) return;
+    try {
+      await axios.delete(`http://localhost:5000/api/subscriptions/${id}`);
+      fetchData();
+    } catch (err) {
+      console.error('Error deleting subscription:', err);
+    }
+  };
+
+  const openAddModal = () => {
+    setSelectedSub(null);
+    setShowModal(true);
+  };
+
+  const openEditModal = (sub: Subscription) => {
+    setSelectedSub(sub);
+    setShowModal(true);
+  };
+
   if (loading) return <Spinner animation="border" className="m-5" />;
 
   return (
     <Container className="py-4">
+      <Stack direction="horizontal" gap={3} className="mb-4">
+        <h4 className="mb-0 fw-bold">Subscriptions</h4>
+        <Button variant="primary" className="ms-auto d-flex align-items-center gap-2 rounded-pill" onClick={openAddModal}>
+          <Plus size={18} /> Add Subscription
+        </Button>
+      </Stack>
+
       <Card className="border-0 shadow-sm">
-        <Card.Header className="bg-white py-3">
-          <h5 className="mb-0">All Subscriptions</h5>
-        </Card.Header>
         <Table responsive hover className="mb-0 align-middle table-borderless">
           <thead className="bg-light">
             <tr>
@@ -39,7 +76,8 @@ export default function Subscriptions() {
               <th className="py-3 text-muted small text-uppercase">Cycle</th>
               <th className="py-3 text-muted small text-uppercase">Next Payment</th>
               <th className="py-3 text-muted small text-uppercase">Category</th>
-              <th className="py-3 text-muted small text-uppercase text-end pe-4">Status</th>
+              <th className="py-3 text-muted small text-uppercase">Status</th>
+              <th className="py-3 text-muted small text-uppercase text-end pe-4">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -63,14 +101,33 @@ export default function Subscriptions() {
                       {sub.Category}
                   </span>
                 </td>
+                <td>
+                  <Badge bg={sub.Active === 'Yes' ? 'success' : 'secondary'} className="rounded-pill">
+                    {sub.Active === 'Yes' ? 'Active' : 'Inactive'}
+                  </Badge>
+                </td>
                 <td className="text-end pe-4">
-                  <div className={`d-inline-block rounded-circle ${sub.Active === 'Yes' ? 'bg-success' : 'bg-secondary'}`} style={{ width: 8, height: 8 }}></div>
+                  <Stack direction="horizontal" gap={2} className="justify-content-end">
+                    <Button variant="link" className="text-muted p-0" onClick={() => openEditModal(sub)}>
+                      <Edit2 size={16} />
+                    </Button>
+                    <Button variant="link" className="text-danger p-0" onClick={() => handleDelete(sub.id)}>
+                      <Trash2 size={16} />
+                    </Button>
+                  </Stack>
                 </td>
               </tr>
             ))}
           </tbody>
         </Table>
       </Card>
+
+      <SubscriptionModal 
+        show={showModal} 
+        onHide={() => setShowModal(false)} 
+        onSave={handleSave} 
+        subscription={selectedSub}
+      />
     </Container>
   );
 }

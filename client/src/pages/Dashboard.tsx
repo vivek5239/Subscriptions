@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import axios from 'axios';
-import { Card, Table, Container, Row, Col, Badge, Spinner } from 'react-bootstrap';
-import { Bell } from 'lucide-react';
+import { Card, Table, Container, Row, Col, Badge, Spinner, Button, Alert } from 'react-bootstrap';
+import { Bell, Bot, Sparkles } from 'lucide-react';
 import { format, parseISO, differenceInDays } from 'date-fns';
 import { DashboardData } from '../types';
 import { Logo } from '../components/Logo';
@@ -9,6 +9,8 @@ import { Logo } from '../components/Logo';
 export default function Dashboard() {
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiResponse, setAiResponse] = useState<string | null>(null);
 
   useEffect(() => {
     fetchData();
@@ -25,6 +27,27 @@ export default function Dashboard() {
     }
   };
 
+  const runAiAnalysis = async () => {
+    const config = JSON.parse(localStorage.getItem('sub_app_config') || '{}');
+    if (!config.geminiApiKey) {
+      alert('Please set your Gemini API Key in Settings first!');
+      return;
+    }
+
+    setAiLoading(true);
+    setAiResponse(null);
+    try {
+      const res = await axios.post('http://localhost:5000/api/ai/analyze', { 
+        apiKey: config.geminiApiKey 
+      });
+      setAiResponse(res.data.analysis);
+    } catch (err: any) {
+      alert(err.response?.data?.error || 'AI Analysis failed');
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
   if (loading) return <Spinner animation="border" className="m-5" />;
 
   const upcomingPayments = data?.subscriptions
@@ -36,6 +59,7 @@ export default function Dashboard() {
     <Container className="py-4">
         {/* KPI Cards Row 1 */}
         <Row className="mb-4 g-3">
+          {/* ... existing cards ... */}
           <Col md={4} lg={2}>
             <Card className="border-0 shadow-sm h-100">
               <Card.Body className="p-3">
@@ -90,6 +114,35 @@ export default function Dashboard() {
             </Card>
           </Col>
         </Row>
+
+        {/* AI Insights Section */}
+        <Card className="border-0 shadow-sm mb-4 bg-gradient-primary text-white" style={{ background: 'linear-gradient(45deg, #0d6efd, #6610f2)' }}>
+          <Card.Body className="p-4">
+            <div className="d-flex justify-content-between align-items-center mb-3">
+              <h5 className="mb-0 d-flex align-items-center gap-2">
+                <Bot size={24} />
+                AI Financial Insights
+              </h5>
+              <Button 
+                variant="light" 
+                size="sm" 
+                className="rounded-pill px-3 d-flex align-items-center gap-2"
+                onClick={runAiAnalysis}
+                disabled={aiLoading}
+              >
+                {aiLoading ? <Spinner size="sm" /> : <Sparkles size={16} />}
+                {aiLoading ? 'Analyzing...' : 'Generate Insights'}
+              </Button>
+            </div>
+            {aiResponse ? (
+              <div className="bg-white text-dark p-3 rounded shadow-inner" style={{ maxHeight: '300px', overflowY: 'auto' }}>
+                <pre style={{ whiteSpace: 'pre-wrap', fontFamily: 'inherit', marginBottom: 0 }}>{aiResponse}</pre>
+              </div>
+            ) : (
+              <p className="mb-0 opacity-75">Click the button above to have Gemini 2.5 Pro analyze your subscriptions and suggest savings.</p>
+            )}
+          </Card.Body>
+        </Card>
 
         <Row className="g-4">
           {/* Upcoming Payments */}
