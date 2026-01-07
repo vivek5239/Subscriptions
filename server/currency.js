@@ -1,14 +1,43 @@
+import axios from 'axios';
 
-const RATES = {
+let RATES = {
   '₹': 1,
   'INR': 1,
-  '$': 85.5, // Approx rate
+  '$': 85.5, // Fallback rate
   'USD': 85.5,
   '€': 93.0,
   'EUR': 93.0,
   '£': 108.0,
   'GBP': 108.0
 };
+
+export async function updateRates() {
+  try {
+    // Frankfurter API uses EUR as default base.
+    const response = await axios.get('https://api.frankfurter.app/latest');
+    const { rates } = response.data;
+    const inrPerEur = rates.INR;
+    
+    if (inrPerEur) {
+      RATES['€'] = inrPerEur;
+      RATES['EUR'] = inrPerEur;
+      
+      for (const [code, value] of Object.entries(rates)) {
+        if (code === 'INR') continue;
+        const inrPerCode = inrPerEur / value;
+        RATES[code] = inrPerCode;
+      }
+      
+      // Map common symbols to their codes' rates
+      if (RATES['USD']) RATES['$'] = RATES['USD'];
+      if (RATES['GBP']) RATES['£'] = RATES['GBP'];
+
+      console.log(`[Currency] Rates updated. USD: ₹${RATES.USD?.toFixed(2)}, EUR: ₹${RATES.EUR?.toFixed(2)}, GBP: ₹${RATES.GBP?.toFixed(2)}`);
+    }
+  } catch (error) {
+    console.error('[Currency] Failed to update rates:', error.message);
+  }
+}
 
 export function parsePrice(priceStr) {
   if (!priceStr) return { value: 0, currency: 'INR' };
@@ -20,10 +49,13 @@ export function parsePrice(priceStr) {
   let currency = 'INR';
   let valueStr = cleanStr;
 
-  // Check symbols
-  for (const symbol in RATES) {
+  // Check symbols - order matters (longer first or specific)
+  // We sort keys by length descending to match 'USD' before '$' if both present (though unlikely)
+  const sortedSymbols = Object.keys(RATES).sort((a, b) => b.length - a.length);
+
+  for (const symbol of sortedSymbols) {
     if (cleanStr.includes(symbol)) {
-      currency = symbol; // Keep symbol or code
+      currency = symbol;
       valueStr = cleanStr.replace(symbol, '');
       break;
     }
@@ -36,16 +68,7 @@ export function parsePrice(priceStr) {
 
 export function convertToINR(priceStr) {
   const { value, currency } = parsePrice(priceStr);
-  const rate = RATES[currency] || RATES['$']; // Default to USD rate if unknown, or maybe 1? Safe to assume 1 if really unknown but usually it's major currencies.
+  const rate = RATES[currency] || 1; 
   
-  // If currency key not found directly, try to map symbols
-  let finalRate = 1;
-  if (RATES[currency]) {
-    finalRate = RATES[currency];
-  } else {
-      // Fallback logic
-      finalRate = 1;
-  }
-
-  return value * finalRate;
+  return value * rate;
 }

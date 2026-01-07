@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Container, Card, Form, Button, Row, Col, Alert } from 'react-bootstrap';
+import { Container, Card, Form, Button, Row, Col } from 'react-bootstrap';
 import { Save, Bot, Bell, ShieldCheck } from 'lucide-react';
 import axios from 'axios';
 
@@ -16,7 +16,6 @@ export default function SettingsView() {
     testRecipient: '',
     mainCurrency: 'INR'
   });
-  const [status, setStatus] = useState<{ type: 'success' | 'danger', msg: string } | null>(null);
   const [testing, setTesting] = useState<string | null>(null);
 
   useEffect(() => {
@@ -25,46 +24,42 @@ export default function SettingsView() {
 
   const fetchSettings = async () => {
     try {
-      const res = await axios.get('http://localhost:5000/api/settings');
-      if (res.data) setConfig({ ...config, ...res.data });
+      const res = await axios.get('/api/settings');
+      if (res.data) setConfig(res.data);
     } catch (err) {
-      console.error('Error fetching settings:', err);
+      console.error(err);
     }
   };
 
-  const handleSave = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSave = async () => {
     try {
-      await axios.post('http://localhost:5000/api/settings', config);
+      await axios.post('/api/settings', config);
       localStorage.setItem('sub_app_config', JSON.stringify(config));
-      setStatus({ type: 'success', msg: 'Settings saved successfully!' });
-      setTimeout(() => setStatus(null), 3000);
+      alert('Settings saved successfully!');
     } catch (err) {
-      setStatus({ type: 'danger', msg: 'Failed to save settings.' });
+      alert('Error saving settings');
     }
   };
 
   const testGotify = async () => {
-    if (!config.gotifyUrl || !config.gotifyToken) return alert('Please save Gotify settings first.');
     setTesting('gotify');
     try {
-      await axios.post('http://localhost:5000/api/test/gotify', config);
-      alert('Test notification sent successfully!');
+      await axios.post('/api/test/gotify', config);
+      alert('Test notification sent!');
     } catch (err: any) {
-      alert('Gotify test failed: ' + (err.response?.data?.error || err.message));
+      alert('Error: ' + (err.response?.data?.error || err.message));
     } finally {
       setTesting(null);
     }
   };
 
   const testEmail = async () => {
-    if (!config.smtpHost || !config.smtpUser) return alert('Please save SMTP settings first.');
     setTesting('email');
     try {
-      await axios.post('http://localhost:5000/api/test/email', config);
-      alert('Test email sent successfully!');
+      await axios.post('/api/test/email', config);
+      alert('Test email sent!');
     } catch (err: any) {
-      alert('Email test failed: ' + (err.response?.data?.error || err.message));
+      alert('Error: ' + (err.response?.data?.error || err.message));
     } finally {
       setTesting(null);
     }
@@ -74,8 +69,6 @@ export default function SettingsView() {
     <Container className="py-4">
       <h4 className="mb-4 fw-bold">Settings</h4>
       
-      {status && <Alert variant={status.type} className="border-0 shadow-sm">{status.msg}</Alert>}
-
       <Form onSubmit={handleSave}>
         {/* Groq AI Settings */}
         <Card className="border-0 shadow-sm mb-4">

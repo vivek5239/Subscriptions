@@ -16,7 +16,7 @@ export default function StatsView() {
 
   const fetchData = async () => {
     try {
-      const res = await axios.get('http://localhost:5000/api/subscriptions');
+      const res = await axios.get('/api/subscriptions');
       setData(res.data);
     } catch (err) {
       console.error(err);

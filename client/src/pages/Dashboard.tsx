@@ -18,7 +18,7 @@ export default function Dashboard() {
 
   const fetchData = async () => {
     try {
-      const res = await axios.get('http://localhost:5000/api/subscriptions');
+      const res = await axios.get('/api/subscriptions');
       setData(res.data);
     } catch (err) {
       console.error(err);
@@ -37,7 +37,7 @@ export default function Dashboard() {
     setAiLoading(true);
     setAiResponse(null);
     try {
-      const res = await axios.post('http://localhost:5000/api/ai/analyze', { 
+      const res = await axios.post('/api/ai/analyze', { 
         apiKey: config.groqApiKey 
       });
       setAiResponse(res.data.analysis);

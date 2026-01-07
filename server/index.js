@@ -8,7 +8,7 @@ import nodemailer from 'nodemailer';
 import axios from 'axios';
 import Groq from 'groq-sdk';
 import { getAllSubscriptions, saveSubscription, deleteSubscription } from './db.js';
-import { convertToINR, parsePrice } from './currency.js';
+import { convertToINR, parsePrice, updateRates } from './currency.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -290,6 +290,14 @@ cron.schedule('0 9 * * *', async () => {
   }
 });
 
-app.listen(PORT, () => {
+// Update exchange rates daily at midnight
+cron.schedule('0 0 * * *', async () => {
+  console.log('Running daily exchange rate update...');
+  await updateRates();
+});
+
+app.listen(PORT, async () => {
   console.log(`Server running on http://localhost:${PORT}`);
+  // Initial rates update
+  await updateRates();
 });

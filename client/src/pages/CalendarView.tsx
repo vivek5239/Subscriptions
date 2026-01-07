@@ -18,8 +18,8 @@ export default function CalendarView() {
 
   const fetchData = async () => {
     try {
-      const res = await axios.get('http://localhost:5000/api/subscriptions');
-      setSubscriptions(res.data.subscriptions.filter((s: Subscription) => s.Active === 'Yes'));
+      const res = await axios.get('/api/subscriptions');
+      setSubscriptions(res.data.subscriptions);
     } catch (err) {
       console.error(err);
     } finally {

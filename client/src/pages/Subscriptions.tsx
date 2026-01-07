@@ -18,7 +18,7 @@ export default function Subscriptions() {
 
   const fetchData = async () => {
     try {
-      const res = await axios.get('http://localhost:5000/api/subscriptions');
+      const res = await axios.get('/api/subscriptions');
       setSubscriptions(res.data.subscriptions);
     } catch (err) {
       console.error(err);
@@ -29,7 +29,7 @@ export default function Subscriptions() {
 
   const handleSave = async (subData: Partial<Subscription>) => {
     try {
-      await axios.post('http://localhost:5000/api/subscriptions', subData);
+      await axios.post('/api/subscriptions', subData);
       fetchData();
     } catch (err) {
       console.error('Error saving subscription:', err);
@@ -39,7 +39,7 @@ export default function Subscriptions() {
   const handleDelete = async (id: string) => {
     if (!window.confirm('Are you sure you want to delete this subscription?')) return;
     try {
-      await axios.delete(`http://localhost:5000/api/subscriptions/${id}`);
+      await axios.delete(`/api/subscriptions/${id}`);
       fetchData();
     } catch (err) {
       console.error('Error deleting subscription:', err);
