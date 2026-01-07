@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 import axios from 'axios';
-import { Card, Table, Container, Row, Col, Badge, Spinner, Button, Alert } from 'react-bootstrap';
+import { Card, Table, Container, Row, Col, Badge, Spinner, Button } from 'react-bootstrap';
 import { Bell, Bot, Sparkles } from 'lucide-react';
 import { format, parseISO, differenceInDays } from 'date-fns';
-import { DashboardData } from '../types';
+import type { DashboardData } from '../types';
 import { Logo } from '../components/Logo';
 
 export default function Dashboard() {
@@ -29,8 +29,8 @@ export default function Dashboard() {
 
   const runAiAnalysis = async () => {
     const config = JSON.parse(localStorage.getItem('sub_app_config') || '{}');
-    if (!config.geminiApiKey) {
-      alert('Please set your Gemini API Key in Settings first!');
+    if (!config.groqApiKey) {
+      alert('Please set your Groq API Key in Settings first!');
       return;
     }
 
@@ -38,7 +38,7 @@ export default function Dashboard() {
     setAiResponse(null);
     try {
       const res = await axios.post('http://localhost:5000/api/ai/analyze', { 
-        apiKey: config.geminiApiKey 
+        apiKey: config.groqApiKey 
       });
       setAiResponse(res.data.analysis);
     } catch (err: any) {
@@ -139,7 +139,7 @@ export default function Dashboard() {
                 <pre style={{ whiteSpace: 'pre-wrap', fontFamily: 'inherit', marginBottom: 0 }}>{aiResponse}</pre>
               </div>
             ) : (
-              <p className="mb-0 opacity-75">Click the button above to have Gemini 2.5 Pro analyze your subscriptions and suggest savings.</p>
+              <p className="mb-0 opacity-75">Click the button above to have Groq AI analyze your subscriptions and suggest savings.</p>
             )}
           </Card.Body>
         </Card>

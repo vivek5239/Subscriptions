@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Modal, Button, Form, Row, Col } from 'react-bootstrap';
-import { Subscription } from '../types';
+import type { Subscription } from '../types';
 
 interface SubscriptionModalProps {
   show: boolean;

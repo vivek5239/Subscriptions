@@ -33,6 +33,5 @@ docker-compose.override.yml
 *.swp
 *.swo
 
-# Data (Don't commit the actual data if it's sensitive, but user asked to use subscriptions.json)
-# We will commit subscriptions.json as seed data, but usually data/* is ignored.
-# keeping data/subscriptions.json tracked for now as per context.
+# Data
+data/

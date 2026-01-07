@@ -6,6 +6,7 @@ export interface Subscription {
   'Next Payment': string;
   Category: string;
   Active: string;
+  Renewal: string;
   valueINR: number;
   monthlyCost: number;
   URL?: string;

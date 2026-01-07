@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import axios from 'axios';
 import { Container, Card, Row, Col, Spinner } from 'react-bootstrap';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, BarChart, Bar, XAxis, YAxis, Legend, CartesianGrid } from 'recharts';
-import { DashboardData } from '../types';
+import type { DashboardData } from '../types';
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d', '#ffc658'];
 
@@ -66,13 +66,13 @@ export default function StatsView() {
                     outerRadius={100}
                     paddingAngle={5}
                     dataKey="value"
-                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                    label={({ name, percent }: any) => `${name} ${(percent * 100).toFixed(0)}%`}
                   >
                     {pieData.map((_, index) => (
                       <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                     ))}
                   </Pie>
-                  <Tooltip formatter={(value) => `₹${value}`} />
+                  <Tooltip formatter={(value: any) => `₹${value}`} />
                   <Legend />
                 </PieChart>
               </ResponsiveContainer>
@@ -92,7 +92,7 @@ export default function StatsView() {
                   <CartesianGrid strokeDasharray="3 3" vertical={false} />
                   <XAxis dataKey="month" />
                   <YAxis />
-                  <Tooltip formatter={(value) => `₹${value.toLocaleString()}`} />
+                  <Tooltip formatter={(value: any) => `₹${value.toLocaleString()}`} />
                   <Bar dataKey="amount" fill="#0088FE" radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>

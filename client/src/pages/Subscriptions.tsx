@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import axios from 'axios';
 import { Card, Table, Container, Badge, Spinner, Button, Stack } from 'react-bootstrap';
 import { Plus, Edit2, Trash2 } from 'lucide-react';
-import { Subscription } from '../types';
+import type { Subscription } from '../types';
 import { Logo } from '../components/Logo';
 import SubscriptionModal from '../components/SubscriptionModal';
 

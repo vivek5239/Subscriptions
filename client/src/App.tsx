@@ -80,7 +80,7 @@ function App() {
         </Offcanvas>
 
         {/* Main Content */}
-        <div className="flex-grow-1">
+        <div className="flex-grow-1 w-100">
           <Routes>
             <Route path="/" element={<Dashboard />} />
             <Route path="/subscriptions" element={<Subscriptions />} />

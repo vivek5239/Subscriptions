@@ -4,7 +4,7 @@ import { Container, Card, Row, Col, ListGroup, Badge, Spinner } from 'react-boot
 import Calendar from 'react-calendar';
 import 'react-calendar/dist/Calendar.css';
 import { format, parseISO, isSameDay } from 'date-fns';
-import { Subscription } from '../types';
+import type { Subscription } from '../types';
 import { Logo } from '../components/Logo';
 
 export default function CalendarView() {
