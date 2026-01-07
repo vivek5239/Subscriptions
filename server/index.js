@@ -114,7 +114,7 @@ app.delete('/api/subscriptions/:id', async (req, res) => {
 });
 
 // SPA Fallback
-app.get('*', (req, res) => {
+app.get(/^(?!\/api).+/, (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
