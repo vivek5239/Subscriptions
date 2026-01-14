@@ -7,7 +7,7 @@ services:
     container_name: subscriptions
     restart: unless-stopped
     ports:
-      - "5000:5000"
+      - "5005:5000"
     volumes:
       - ./data:/data
     environment:

@@ -7,7 +7,7 @@ import cron from 'node-cron';
 import nodemailer from 'nodemailer';
 import axios from 'axios';
 import Groq from 'groq-sdk';
-import { getAllSubscriptions, saveSubscription, deleteSubscription } from './db.js';
+import { getAllSubscriptions, saveSubscription, deleteSubscription, findUserById, saveUser } from './db.js';
 import { convertToINR, parsePrice, updateRates } from './currency.js';
 import authRouter from './routes/auth.js';
 import { authenticateToken } from './middleware/auth.js';
@@ -24,6 +24,32 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 // --- Auth Routes ---
 app.use('/api/auth', authRouter);
+
+// --- User Preferences Routes ---
+
+app.get('/api/user/preferences', authenticateToken, async (req, res) => {
+  try {
+    const user = await findUserById(req.user.id);
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    res.json(user.preferences || { mode: 'light', color: 'purple' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.put('/api/user/preferences', authenticateToken, async (req, res) => {
+  try {
+    const user = await findUserById(req.user.id);
+    if (!user) return res.status(404).json({ error: 'User not found' });
+
+    user.preferences = { ...user.preferences, ...req.body };
+    await saveUser(user);
+    
+    res.json({ success: true, preferences: user.preferences });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
 
 // --- API Endpoints ---
 

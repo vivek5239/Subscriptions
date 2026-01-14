@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Container, Card, Form, Button, Row, Col } from 'react-bootstrap';
-import { Save, Bot, Bell, ShieldCheck, Palette, Check } from 'lucide-react';
+import { Save, Bot, Bell, ShieldCheck, Palette, Check, Moon } from 'lucide-react';
 import axios from 'axios';
 import type { Settings } from '../types';
 import { useTheme, type ThemeColor } from '../context/ThemeContext';
@@ -20,7 +20,7 @@ export default function SettingsView() {
     notificationsEnabled: true
   });
   const [testing, setTesting] = useState<string | null>(null);
-  const { color, setColor } = useTheme();
+  const { color, setColor, mode, toggleMode } = useTheme();
 
   const colors: { id: ThemeColor; value: string; label: string }[] = [
     { id: 'purple', value: '#6366f1', label: 'Purple' },
@@ -310,6 +310,20 @@ export default function SettingsView() {
             <h6 className="mb-0 fw-bold">Appearance</h6>
           </Card.Header>
           <Card.Body>
+            <Form.Group className="mb-4">
+              <Form.Label className="d-flex align-items-center gap-2">
+                <Moon size={16} className="text-muted" /> Theme Mode
+              </Form.Label>
+              <Form.Check 
+                type="switch"
+                id="dark-mode-switch"
+                label={mode === 'dark' ? 'Dark Mode' : 'Light Mode'}
+                checked={mode === 'dark'}
+                onChange={toggleMode}
+                className="fs-5"
+              />
+            </Form.Group>
+
             <Form.Group>
               <Form.Label>Accent Color</Form.Label>
               <div className="d-flex gap-3 flex-wrap">
