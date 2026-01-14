@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import axios from 'axios';
 import { Card, Table, Container, Row, Col, Badge, Spinner, Button } from 'react-bootstrap';
-import { Bell, Bot, Sparkles } from 'lucide-react';
+import { Bell, Bot, Sparkles, CheckCircle } from 'lucide-react';
 import { format, parseISO, differenceInDays } from 'date-fns';
 import type { DashboardData } from '../types';
 import { Logo } from '../components/Logo';
@@ -24,6 +24,15 @@ export default function Dashboard() {
       console.error(err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleMarkPaid = async (id: string) => {
+    try {
+      await axios.post(`/api/subscriptions/${id}/pay`);
+      fetchData();
+    } catch (err) {
+      console.error('Error marking as paid:', err);
     }
   };
 
@@ -187,11 +196,23 @@ export default function Dashboard() {
                         </div>
                         <span className="fw-bold">{sub.Price}</span>
                       </div>
-                      <div className="d-flex justify-content-between small">
+                      <div className="d-flex justify-content-between align-items-center small mt-2">
                         <span className="text-muted">{format(parseISO(sub['Next Payment']), 'MMM dd, yyyy')}</span>
-                        <Badge bg={isOverdue ? 'danger' : isToday ? 'warning' : 'info'} className="rounded-pill">
-                          {isOverdue ? `Overdue ${Math.abs(daysLeft)}d` : isToday ? 'Today' : `In ${daysLeft} days`}
-                        </Badge>
+                        <div className="d-flex align-items-center gap-2">
+                          <Badge bg={isOverdue ? 'danger' : isToday ? 'warning' : 'info'} className="rounded-pill">
+                            {isOverdue ? `Overdue ${Math.abs(daysLeft)}d` : isToday ? 'Today' : `In ${daysLeft} days`}
+                          </Badge>
+                          <Button 
+                            variant="outline-success" 
+                            size="sm" 
+                            className="rounded-circle p-1 d-flex align-items-center justify-content-center"
+                            style={{ width: 24, height: 24 }}
+                            title="Mark as Paid"
+                            onClick={() => handleMarkPaid(sub.id)}
+                          >
+                            <CheckCircle size={14} />
+                          </Button>
+                        </div>
                       </div>
                     </div>
                   );

@@ -128,6 +128,57 @@ app.delete('/api/subscriptions/:id', authenticateToken, async (req, res) => {
   }
 });
 
+// Mark Subscription as Paid (Manual)
+app.post('/api/subscriptions/:id/pay', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const subId = req.params.id;
+    
+    const allSubs = await getAllSubscriptions(userId);
+    const sub = allSubs.find(s => s.id === subId);
+
+    if (!sub) {
+      return res.status(404).json({ error: 'Subscription not found' });
+    }
+
+    const currentNextPayment = new Date(sub['Next Payment']);
+    let nextDate = new Date(currentNextPayment);
+
+    switch (sub['Payment Cycle']) {
+      case 'Monthly':
+        nextDate.setMonth(nextDate.getMonth() + 1);
+        break;
+      case 'Quarterly':
+        nextDate.setMonth(nextDate.getMonth() + 3);
+        break;
+      case 'Yearly':
+        nextDate.setFullYear(nextDate.getFullYear() + 1);
+        break;
+      default:
+        // Default to monthly if unknown
+        nextDate.setMonth(nextDate.getMonth() + 1);
+    }
+
+    // Handle end-of-month edge cases (e.g., Jan 31 -> Feb 28/29)
+    // Date object automatically handles rollover (Jan 31 + 1 month -> March 3 or 2), 
+    // but typically for subscriptions we want to stick to the day or the last day of the month.
+    // A simple approach is acceptable here, or we can check if the day changed.
+    // Let's stick to simple Date addition which is standard behavior for now.
+    
+    const updatedSub = {
+      ...sub,
+      'Next Payment': nextDate.toISOString().split('T')[0]
+    };
+
+    await saveSubscription(updatedSub, userId);
+    res.json(updatedSub);
+
+  } catch (error) {
+    console.error('Error marking as paid:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Settings Endpoints
 // Note: For now, settings are still global/file-based. 
 // Ideally, these should be per-user too. 
