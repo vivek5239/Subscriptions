@@ -10,8 +10,23 @@ export interface Subscription {
   valueINR: number;
   monthlyCost: number;
   URL?: string;
+  ManualLogo?: string;
   Notes?: string;
   'Payment Method'?: string;
+}
+
+export interface Settings {
+  groqApiKey?: string;
+  gotifyUrl?: string;
+  gotifyToken?: string;
+  smtpHost?: string;
+  smtpPort?: string;
+  smtpUser?: string;
+  smtpPass?: string;
+  smtpFrom?: string;
+  testRecipient?: string;
+  mainCurrency: string;
+  notificationsEnabled?: boolean;
 }
 
 export interface DashboardData {

@@ -101,8 +101,13 @@ The `docker-compose.yml` maps the host's `./data` folder to `/data` inside the c
 
 ## 8. Future Roadmap
 
-1.  **Gemini AI Integration**:
-    *   Implement an endpoint `/api/analyze` that sends the subscription JSON to Google's Gemini Flash model.
+1.  **Groq AI Integration**:
+
+*   Implement an endpoint `/api/analyze` that sends the subscription JSON to Groq's llama-3.3-70b-versatile model.
+
+
+
+
     *   Prompt: "Analyze these expenses and suggest 3 ways to save money."
 
 2.  **Notifications**:

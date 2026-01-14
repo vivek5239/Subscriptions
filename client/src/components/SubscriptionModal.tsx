@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Modal, Button, Form, Row, Col } from 'react-bootstrap';
 import type { Subscription } from '../types';
+import { Logo } from './Logo';
 
 interface SubscriptionModalProps {
   show: boolean;
@@ -8,6 +9,33 @@ interface SubscriptionModalProps {
   onSave: (sub: Partial<Subscription>) => void;
   subscription?: Subscription | null;
 }
+
+const CATEGORIES = [
+  'Entertainment',
+  'Utilities',
+  'Productivity',
+  'Shopping',
+  'Health & Fitness',
+  'Food & Drink',
+  'Education',
+  'Transportation',
+  'Housing',
+  'Insurance',
+  'Other'
+];
+
+const PAYMENT_METHODS = [
+  'Credit Card',
+  'Debit Card',
+  'Direct Debit',
+  'PayPal',
+  'UPI',
+  'Net Banking',
+  'Cash',
+  'Apple Pay',
+  'Google Pay',
+  'Other'
+];
 
 export default function SubscriptionModal({ show, onHide, onSave, subscription }: SubscriptionModalProps) {
   const [formData, setFormData] = useState<Partial<Subscription>>({
@@ -18,14 +46,18 @@ export default function SubscriptionModal({ show, onHide, onSave, subscription }
     Category: 'Utilities',
     Active: 'Yes',
     Renewal: 'Automatic',
-    'Payment Method': '',
+    'Payment Method': 'Credit Card',
     Notes: '',
-    URL: ''
+    URL: '',
+    ManualLogo: ''
   });
 
   useEffect(() => {
     if (subscription) {
-      setFormData(subscription);
+      setFormData({
+        ...subscription,
+        ManualLogo: subscription.ManualLogo || ''
+      });
     } else {
       setFormData({
         Name: '',
@@ -35,12 +67,24 @@ export default function SubscriptionModal({ show, onHide, onSave, subscription }
         Category: 'Utilities',
         Active: 'Yes',
         Renewal: 'Automatic',
-        'Payment Method': '',
+        'Payment Method': 'Credit Card',
         Notes: '',
-        URL: ''
+        URL: '',
+        ManualLogo: ''
       });
     }
   }, [subscription, show]);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setFormData({ ...formData, ManualLogo: reader.result as string });
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -58,13 +102,23 @@ export default function SubscriptionModal({ show, onHide, onSave, subscription }
           <Row className="mb-3">
             <Form.Group as={Col} md={6}>
               <Form.Label>Subscription Name</Form.Label>
-              <Form.Control
-                required
-                type="text"
-                placeholder="e.g. Netflix"
-                value={formData.Name}
-                onChange={(e) => setFormData({ ...formData, Name: e.target.value })}
-              />
+              <div className="d-flex align-items-center gap-2">
+                {formData.Name && (
+                  <Logo 
+                    name={formData.Name} 
+                    url={formData.URL} 
+                    manualLogo={formData.ManualLogo} 
+                    size={38} 
+                  />
+                )}
+                <Form.Control
+                  required
+                  type="text"
+                  placeholder="e.g. Netflix"
+                  value={formData.Name}
+                  onChange={(e) => setFormData({ ...formData, Name: e.target.value })}
+                />
+              </div>
             </Form.Group>
             <Form.Group as={Col} md={6}>
               <Form.Label>Price (with currency)</Form.Label>
@@ -104,35 +158,59 @@ export default function SubscriptionModal({ show, onHide, onSave, subscription }
           <Row className="mb-3">
             <Form.Group as={Col} md={6}>
               <Form.Label>Category</Form.Label>
-              <Form.Control
-                type="text"
-                placeholder="e.g. Entertainment"
+              <Form.Select
                 value={formData.Category}
                 onChange={(e) => setFormData({ ...formData, Category: e.target.value })}
-              />
+              >
+                {CATEGORIES.map(cat => (
+                  <option key={cat} value={cat}>{cat}</option>
+                ))}
+              </Form.Select>
             </Form.Group>
             <Form.Group as={Col} md={6}>
               <Form.Label>Payment Method</Form.Label>
-              <Form.Control
-                type="text"
-                placeholder="e.g. Credit Card"
+              <Form.Select
                 value={formData['Payment Method']}
                 onChange={(e) => setFormData({ ...formData, 'Payment Method': e.target.value })}
-              />
+              >
+                {PAYMENT_METHODS.map(method => (
+                  <option key={method} value={method}>{method}</option>
+                ))}
+              </Form.Select>
             </Form.Group>
           </Row>
 
           <Row className="mb-3">
-            <Form.Group as={Col} md={12}>
-              <Form.Label>Website URL (for Logo)</Form.Label>
+            <Form.Group as={Col} md={6}>
+              <Form.Label>Website URL (for Auto Logo)</Form.Label>
               <Form.Control
                 type="text"
                 placeholder="e.g. netflix.com"
                 value={formData.URL}
                 onChange={(e) => setFormData({ ...formData, URL: e.target.value })}
               />
+            </Form.Group>
+            <Form.Group as={Col} md={6}>
+              <Form.Label>Manual Logo URL (Optional)</Form.Label>
+              <Form.Control
+                type="text"
+                placeholder="https://example.com/logo.png"
+                value={formData.ManualLogo}
+                onChange={(e) => setFormData({ ...formData, ManualLogo: e.target.value })}
+              />
+            </Form.Group>
+          </Row>
+
+          <Row className="mb-3">
+            <Form.Group as={Col} md={12}>
+              <Form.Label>Or Upload Logo Image</Form.Label>
+              <Form.Control
+                type="file"
+                accept="image/*"
+                onChange={handleFileChange}
+              />
               <Form.Text className="text-muted">
-                Entering the domain helps us fetch the official logo automatically.
+                If provided, the manual logo (URL or Upload) will override the automatic one.
               </Form.Text>
             </Form.Group>
           </Row>

@@ -51,8 +51,8 @@ export default function StatsView() {
       <Row className="g-4">
         {/* Category Breakdown Pie Chart */}
         <Col lg={6}>
-          <Card className="border-0 shadow-sm h-100">
-            <Card.Header className="bg-white py-3 border-bottom-0">
+          <Card className="shadow-sm h-100">
+            <Card.Header className="bg-transparent py-3 border-bottom-0">
               <h6 className="mb-0 fw-bold">Spending by Category (Monthly)</h6>
             </Card.Header>
             <Card.Body style={{ height: '350px' }}>
@@ -67,13 +67,18 @@ export default function StatsView() {
                     paddingAngle={5}
                     dataKey="value"
                     label={({ name, percent }: any) => `${name} ${(percent * 100).toFixed(0)}%`}
+                    stroke="none"
                   >
                     {pieData.map((_, index) => (
                       <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                     ))}
                   </Pie>
-                  <Tooltip formatter={(value: any) => `₹${value}`} />
-                  <Legend />
+                  <Tooltip 
+                    contentStyle={{ backgroundColor: 'var(--bs-body-bg)', borderColor: 'var(--bs-border-color)', borderRadius: '8px' }}
+                    itemStyle={{ color: 'var(--bs-body-color)' }}
+                    formatter={(value: any) => `₹${value}`} 
+                  />
+                  <Legend iconType="circle" />
                 </PieChart>
               </ResponsiveContainer>
             </Card.Body>
@@ -82,18 +87,23 @@ export default function StatsView() {
 
         {/* Bar Chart for Monthly Projections */}
         <Col lg={6}>
-          <Card className="border-0 shadow-sm h-100">
-            <Card.Header className="bg-white py-3 border-bottom-0">
+          <Card className="shadow-sm h-100">
+            <Card.Header className="bg-transparent py-3 border-bottom-0">
               <h6 className="mb-0 fw-bold">Monthly Spending Trend (Projected)</h6>
             </Card.Header>
             <Card.Body style={{ height: '350px' }}>
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={monthlyTrendData}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                  <XAxis dataKey="month" />
-                  <YAxis />
-                  <Tooltip formatter={(value: any) => `₹${value.toLocaleString()}`} />
-                  <Bar dataKey="amount" fill="#0088FE" radius={[4, 4, 0, 0]} />
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--bs-border-color-translucent)" />
+                  <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fill: 'var(--bs-secondary-color)' }} />
+                  <YAxis axisLine={false} tickLine={false} tick={{ fill: 'var(--bs-secondary-color)' }} />
+                  <Tooltip 
+                    contentStyle={{ backgroundColor: 'var(--bs-body-bg)', borderColor: 'var(--bs-border-color)', borderRadius: '8px' }}
+                    itemStyle={{ color: 'var(--bs-body-color)' }}
+                    cursor={{ fill: 'var(--bs-tertiary-bg)' }}
+                    formatter={(value: any) => `₹${value.toLocaleString()}`} 
+                  />
+                  <Bar dataKey="amount" fill="#0d6efd" radius={[6, 6, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </Card.Body>
@@ -102,11 +112,11 @@ export default function StatsView() {
 
         {/* Additional KPI Cards */}
         <Col md={4}>
-          <Card className="border-0 shadow-sm bg-primary text-white">
+          <Card className="border-0 shadow-sm bg-primary text-white bg-gradient-primary">
             <Card.Body className="p-4">
               <h6 className="opacity-75 small text-uppercase mb-2">Yearly Forecast</h6>
               <h2 className="mb-0">₹{data.stats.totalYearlyINR.toLocaleString(undefined, { maximumFractionDigits: 0 })}</h2>
-              <p className="mt-2 mb-0 small opacity-75 text-white">Projected total for next 12 months</p>
+              <p className="mt-2 mb-0 small opacity-75">Projected total for next 12 months</p>
             </Card.Body>
           </Card>
         </Col>
@@ -116,7 +126,7 @@ export default function StatsView() {
             <Card.Body className="p-4">
               <h6 className="opacity-75 small text-uppercase mb-2">Daily Average</h6>
               <h2 className="mb-0">₹{(data.stats.totalMonthlyINR / 30).toFixed(0)}</h2>
-              <p className="mt-2 mb-0 small opacity-75 text-white">Estimated cost per day</p>
+              <p className="mt-2 mb-0 small opacity-75">Estimated cost per day</p>
             </Card.Body>
           </Card>
         </Col>
@@ -126,7 +136,7 @@ export default function StatsView() {
             <Card.Body className="p-4">
               <h6 className="opacity-75 small text-uppercase mb-2">Subscription Count</h6>
               <h2 className="mb-0">{data.subscriptions.length}</h2>
-              <p className="mt-2 mb-0 small opacity-75 text-white">{data.subscriptions.filter(s => s.Active === 'Yes').length} Active, {data.subscriptions.filter(s => s.Active === 'No').length} Inactive</p>
+              <p className="mt-2 mb-0 small opacity-75">{data.subscriptions.filter(s => s.Active === 'Yes').length} Active, {data.subscriptions.filter(s => s.Active === 'No').length} Inactive</p>
             </Card.Body>
           </Card>
         </Col>

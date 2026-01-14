@@ -9,6 +9,8 @@ import axios from 'axios';
 import Groq from 'groq-sdk';
 import { getAllSubscriptions, saveSubscription, deleteSubscription } from './db.js';
 import { convertToINR, parsePrice, updateRates } from './currency.js';
+import authRouter from './routes/auth.js';
+import { authenticateToken } from './middleware/auth.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -20,12 +22,16 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
+// --- Auth Routes ---
+app.use('/api/auth', authRouter);
+
 // --- API Endpoints ---
 
 // Get All Subscriptions & Stats
-app.get('/api/subscriptions', async (req, res) => {
+app.get('/api/subscriptions', authenticateToken, async (req, res) => {
   try {
-    const subs = await getAllSubscriptions();
+    const userId = req.user.id;
+    const subs = await getAllSubscriptions(userId);
     
     // Calculate stats
     let totalMonthlyINR = 0;
@@ -103,9 +109,9 @@ app.get('/api/subscriptions', async (req, res) => {
 });
 
 // Save Subscription
-app.post('/api/subscriptions', async (req, res) => {
+app.post('/api/subscriptions', authenticateToken, async (req, res) => {
   try {
-    const sub = await saveSubscription(req.body);
+    const sub = await saveSubscription(req.body, req.user.id);
     res.json(sub);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -113,9 +119,9 @@ app.post('/api/subscriptions', async (req, res) => {
 });
 
 // Delete Subscription
-app.delete('/api/subscriptions/:id', async (req, res) => {
+app.delete('/api/subscriptions/:id', authenticateToken, async (req, res) => {
   try {
-    await deleteSubscription(req.params.id);
+    await deleteSubscription(req.params.id, req.user.id);
     res.json({ success: true });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -123,7 +129,9 @@ app.delete('/api/subscriptions/:id', async (req, res) => {
 });
 
 // Settings Endpoints
-app.post('/api/settings', async (req, res) => {
+// Note: For now, settings are still global/file-based. 
+// Ideally, these should be per-user too. 
+app.post('/api/settings', authenticateToken, async (req, res) => {
   try {
     const settingsPath = path.join(__dirname, '../data/settings.json');
     await fs.writeFile(settingsPath, JSON.stringify(req.body, null, 2));
@@ -133,7 +141,7 @@ app.post('/api/settings', async (req, res) => {
   }
 });
 
-app.get('/api/settings', async (req, res) => {
+app.get('/api/settings', authenticateToken, async (req, res) => {
   try {
     const settingsPath = path.join(__dirname, '../data/settings.json');
     const data = await fs.readFile(settingsPath, 'utf-8');
@@ -144,12 +152,12 @@ app.get('/api/settings', async (req, res) => {
 });
 
 // AI Analysis Endpoint
-app.post('/api/ai/analyze', async (req, res) => {
+app.post('/api/ai/analyze', authenticateToken, async (req, res) => {
   const { apiKey } = req.body;
   if (!apiKey) return res.status(400).json({ error: 'API Key is required' });
 
   try {
-    const subs = await getAllSubscriptions();
+    const subs = await getAllSubscriptions(req.user.id);
     const activeSubs = subs.filter(s => s.Active === 'Yes');
     
     const groq = new Groq({ apiKey: apiKey });
@@ -226,7 +234,105 @@ async function sendEmailNotification(config, subject, text, to) {
   }
 }
 
+// Daily Reminder Logic (Shared)
+async function runDailyReminderCheck() {
+  console.log('[Reminder] Running daily reminder check at:', new Date().toLocaleString());
+  try {
+    const subs = await getAllSubscriptions();
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const dueSoon = subs.filter(sub => {
+      if (!sub['Next Payment'] || sub.Active !== 'Yes') return false;
+      const dueDate = new Date(sub['Next Payment']);
+      dueDate.setHours(0, 0, 0, 0);
+      
+      const diffTime = dueDate.getTime() - today.getTime();
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      
+      console.log(`[Reminder] Checking ${sub.Name}: Due ${sub['Next Payment']}, Diff Days: ${diffDays}`);
+      return diffDays >= 0 && diffDays <= 3; 
+    });
+
+    if (dueSoon.length > 0) {
+      console.log(`[Reminder] Found ${dueSoon.length} subscriptions due soon.`);
+      
+      let config = {};
+      try {
+        const settingsPath = path.join(__dirname, '../data/settings.json');
+        const data = await fs.readFile(settingsPath, 'utf-8');
+        config = JSON.parse(data);
+      } catch (e) { 
+        console.log('[Reminder] No settings found for notifications.'); 
+        return { success: false, message: 'No settings found' }; 
+      }
+
+      let message = `You have ${dueSoon.length} subscriptions due soon:\n` + 
+                      dueSoon.map(s => `- ${s.Name} (${s.Price}) due on ${s['Next Payment']}`).join('\n');
+
+      // AI Summary Integration
+      if (config.groqApiKey) {
+        try {
+          console.log('[Reminder] Requesting Groq AI summary...');
+          const groq = new Groq({ apiKey: config.groqApiKey });
+          const aiPrompt = `
+            I have the following subscriptions due soon. Please write a very concise, friendly, and professional reminder message for an email and push notification.
+            List the items clearly with their prices and due dates.
+            
+            Subscriptions:
+            ${dueSoon.map(s => `- ${s.Name}: ${s.Price}, due on ${s['Next Payment']}`).join('\n')}
+          `;
+
+          const chatCompletion = await groq.chat.completions.create({
+            messages: [{ role: 'user', content: aiPrompt }],
+            model: 'llama-3.3-70b-versatile',
+          });
+
+          const aiSummary = chatCompletion.choices[0]?.message?.content;
+          if (aiSummary) {
+            message = aiSummary;
+            console.log('[Reminder] AI summary generated successfully.');
+          }
+        } catch (aiErr) {
+          console.error('[Reminder] Groq AI summary failed, using fallback message:', aiErr.message);
+        }
+      }
+
+      if (config.notificationsEnabled !== false) {
+        let sent = false;
+        if (config.gotifyUrl && config.gotifyToken) {
+          await sendGotifyNotification(config, 'Upcoming Payments', message);
+          sent = true;
+        }
+        if (config.smtpHost && config.smtpUser) {
+          await sendEmailNotification(config, 'Upcoming Payments Reminder', message);
+          sent = true;
+        }
+        return { success: true, message: sent ? `Sent notifications for ${dueSoon.length} items.` : 'No notification channels configured.' };
+      } else {
+        console.log('[Reminder] Notifications are disabled in settings.');
+        return { success: false, message: 'Notifications are disabled in settings.' };
+      }
+    } else {
+      console.log('[Reminder] No subscriptions due in the next 3 days.');
+      return { success: true, message: 'No subscriptions due in the next 3 days.' };
+    }
+  } catch (err) {
+    console.error('[Reminder] Error:', err);
+    throw err;
+  }
+}
+
 // Test Endpoints
+app.post('/api/test/reminders', async (req, res) => {
+  try {
+    const result = await runDailyReminderCheck();
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 app.post('/api/test/gotify', async (req, res) => {
   try {
     const subs = await getAllSubscriptions();
@@ -256,39 +362,13 @@ app.post('/api/test/email', async (req, res) => {
 
 // Daily Reminder Cron Job (Runs at 9:00 AM)
 cron.schedule('0 9 * * *', async () => {
-  console.log('Running daily reminder check...');
   try {
-    const subs = await getAllSubscriptions();
-    const today = new Date();
-    const dueSoon = subs.filter(sub => {
-      if (!sub['Next Payment'] || sub.Active !== 'Yes') return false;
-      const dueDate = new Date(sub['Next Payment']);
-      const diff = Math.ceil((dueDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-      return diff >= 0 && diff <= 3; // Notify for payments due in next 3 days
-    });
-
-    if (dueSoon.length > 0) {
-      console.log(`Found ${dueSoon.length} subscriptions due soon.`);
-      
-      // Load settings
-      let config = {};
-      try {
-        const settingsPath = path.join(__dirname, '../data/settings.json');
-        const data = await fs.readFile(settingsPath, 'utf-8');
-        config = JSON.parse(data);
-      } catch (e) { console.log('No settings found for notifications.'); return; }
-
-      const message = `You have ${dueSoon.length} subscriptions due soon:\n` + 
-                      dueSoon.map(s => `- ${s.Name} (${s.Price}) due on ${s['Next Payment']}`).join('\n');
-
-      // Send Notifications
-      if (config.gotifyUrl) await sendGotifyNotification(config, 'Upcoming Payments', message);
-      if (config.smtpHost) await sendEmailNotification(config, 'Upcoming Payments Reminder', message);
-    }
+    await runDailyReminderCheck();
   } catch (err) {
-    console.error('Cron Error:', err);
+    console.error('[Cron] Reminder Job Failed:', err);
   }
 });
+
 
 // Update exchange rates daily at midnight
 cron.schedule('0 0 * * *', async () => {
