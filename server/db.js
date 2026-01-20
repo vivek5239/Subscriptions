@@ -33,59 +33,43 @@ async function ensureData() {
     reminders = [
       {
         id: crypto.randomUUID(),
-        Name: 'Sample: Rent Payment',
-        Price: '₹15000',
-        'Payment Cycle': 'Monthly',
+        Name: 'Sample: Call Mom',
         'Next Payment': fiveDaysFromNow.toISOString().split('T')[0],
-        Category: 'Housing',
+        Category: 'Personal',
         Active: 'Yes',
-        Renewal: 'Automatic',
-        'Payment Method': 'Direct Debit',
-        Notes: 'Monthly rent payment for the apartment.',
-        URL: '',
-        ManualLogo: ''
+        Notes: 'Wish her happy birthday!',
       },
       {
         id: crypto.randomUUID(),
-        Name: 'Sample: Netflix',
-        Price: '$14.99',
-        'Payment Cycle': 'Monthly',
+        Name: 'Sample: Project Deadline',
         'Next Payment': fifteenDaysFromNow.toISOString().split('T')[0],
-        Category: 'Entertainment',
+        Category: 'Work',
         Active: 'Yes',
-        Renewal: 'Automatic',
-        'Payment Method': 'Credit Card',
-        Notes: 'Family plan streaming service.',
-        URL: 'netflix.com',
-        ManualLogo: ''
+        Notes: 'Submit the final report for Project X.',
       },
       {
         id: crypto.randomUUID(),
-        Name: 'Sample: Electricity Bill',
-        Price: '₹2500',
-        'Payment Cycle': 'Monthly',
+        Name: 'Sample: Buy Groceries',
+        'Next Payment': today.toISOString().split('T')[0],
+        Category: 'Shopping',
+        Active: 'Yes',
+        Notes: 'Milk, Eggs, Bread, Vegetables.',
+      },
+      {
+        id: crypto.randomUUID(),
+        Name: 'Sample: Doctor Appointment',
         'Next Payment': twoDaysAgo.toISOString().split('T')[0], // Past reminder
-        Category: 'Utilities',
-        Active: 'Yes',
-        Renewal: 'Manual',
-        'Payment Method': 'UPI',
-        Notes: 'Monthly electricity consumption.',
-        URL: '',
-        ManualLogo: ''
+        Category: 'Health',
+        Active: 'No', // Assuming past reminders might be inactive
+        Notes: 'Annual check-up at Dr. Smith\'s office.',
       },
       {
         id: crypto.randomUUID(),
-        Name: 'Sample: Tamil New Year (Chithirai 1)',
-        Price: '₹0',
-        'Payment Cycle': 'Yearly',
+        Name: 'Sample: Tamil New Year',
         'Next Payment': '2026-04-14', // April 14, 2026 for demonstration
         Category: 'Culture',
         Active: 'Yes',
-        Renewal: 'Automatic',
-        'Payment Method': 'N/A',
-        Notes: 'Celebration of Tamil New Year. Date is converted from Chithirai 1.',
-        URL: '',
-        ManualLogo: ''
+        Notes: 'Celebrate Puthandu!',
       }
     ];
     await fs.writeFile(DATA_PATH, JSON.stringify(reminders, null, 2));

@@ -7,7 +7,7 @@ services:
     container_name: reminders
     restart: unless-stopped
     ports:
-      - "5005:5000"
+      - "5006:5000"
     volumes:
       - ./data:/data
     environment:

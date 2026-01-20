@@ -1,44 +1,27 @@
 export interface Reminder {
   id: string;
   Name: string;
-  Price: string;
-  'Payment Cycle': string;
-  'Next Payment': string;
+  'Next Payment': string; // YYYY-MM-DD
   Category: string;
-  Active: string;
-  Renewal: string;
-  valueINR: number;
-  monthlyCost: number;
-  URL?: string;
-  ManualLogo?: string;
+  Active: 'Yes' | 'No';
   Notes?: string;
-  'Payment Method'?: string;
-}
-
-export interface Settings {
-  groqApiKey?: string;
-  gotifyUrl?: string;
-  gotifyToken?: string;
-  smtpHost?: string;
-  smtpPort?: string;
-  smtpUser?: string;
-  smtpPass?: string;
-  smtpFrom?: string;
-  testRecipient?: string;
-  mainCurrency: string;
-  notificationsEnabled?: boolean;
-  dailyCheckTime?: string;
-  lastDailyCheck?: string | null;
 }
 
 export interface DashboardData {
   reminders: Reminder[];
-  stats: {
-    totalMonthlyINR: number;
-    totalYearlyINR: number;
-    averageMonthlyINR: number;
-    dueThisMonthINR: number;
-    mostExpensive: Reminder | null;
-    categoryStats: Record<string, number>;
-  };
+}
+
+export interface Settings {
+  groqApiKey: string;
+  gotifyUrl: string;
+  gotifyToken: string;
+  smtpHost: string;
+  smtpPort: string;
+  smtpUser: string;
+  smtpPass: string;
+  smtpFrom: string;
+  testRecipient: string;
+  notificationsEnabled: boolean;
+  dailyCheckTime: string;
+  lastDailyCheck: string | null;
 }

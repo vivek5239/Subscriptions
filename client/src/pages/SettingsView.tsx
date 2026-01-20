@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Container, Card, Form, Button, Row, Col } from 'react-bootstrap';
-import { Save, Bot, Bell, ShieldCheck, Palette, Check, Moon } from 'lucide-react';
+import { Save, Bot, Bell, Palette, Check, Moon, CalendarDays, UploadCloud } from 'lucide-react';
 import axios from 'axios';
 import type { Settings } from '../types';
 import { useTheme, type ThemeColor } from '../context/ThemeContext';
@@ -16,7 +16,6 @@ export default function SettingsView() {
     smtpPass: '',
     smtpFrom: '',
     testRecipient: '',
-    mainCurrency: 'INR',
     notificationsEnabled: true,
     dailyCheckTime: '09:00',
     lastDailyCheck: null,
@@ -184,7 +183,7 @@ export default function SettingsView() {
                 className="bg-body border-secondary border-opacity-25"
               />
               <Form.Text className="text-muted">
-                Used for generating reminder insights and cost-cutting tips with <strong>llama-3.3-70b-versatile</strong>.
+                Used for generating reminder insights and for natural language reminder creation.
               </Form.Text>
             </Form.Group>
           </Card.Body>
@@ -418,7 +417,7 @@ export default function SettingsView() {
         </Card>
 
         <div className="d-flex justify-content-end">
-          <Button variant="primary" type="remmit" className="d-flex align-items-center gap-2 px-4 rounded-pill shadow-sm">
+          <Button variant="primary" type="submit" className="d-flex align-items-center gap-2 px-4 rounded-pill shadow-sm">
             <Save size={18} /> Save Settings
           </Button>
         </div>

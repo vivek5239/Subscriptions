@@ -5,7 +5,6 @@ import Calendar from 'react-calendar';
 import 'react-calendar/dist/Calendar.css';
 import { format, parseISO, isSameDay } from 'date-fns';
 import type { Reminder } from '../types';
-import { Logo } from '../components/Logo';
 
 export default function CalendarView() {
   const [reminders, setReminders] = useState<Reminder[]>([]);
@@ -49,8 +48,6 @@ export default function CalendarView() {
 
                   <span className="tile-rem-name text-truncate">{rem.Name}</span>
 
-                  <span className="tile-rem-price small">{rem.Price.split(' ')[0]}</span>
-
                 </div>
 
               ))}
@@ -68,7 +65,6 @@ export default function CalendarView() {
     };
 
   
-
     const selectedDaySubs = reminders.filter(rem => 
 
       rem['Next Payment'] && isSameDay(parseISO(rem['Next Payment']), selectedDate)
@@ -76,14 +72,12 @@ export default function CalendarView() {
     );
 
   
-
     if (loading) return <Spinner animation="border" className="m-5" />;
 
   
-
     return (
       <Container className="py-4">
-        <h4 className="mb-4 fw-bold">Payment Calendar</h4>
+        <h4 className="mb-4 fw-bold">Reminder Calendar</h4>
         <Row className="g-4">
           <Col lg={8}>
             <Card className="shadow-sm p-3 overflow-hidden">
@@ -98,7 +92,7 @@ export default function CalendarView() {
           <Col lg={4}>
             <Card className="shadow-sm h-100">
               <Card.Header className="bg-transparent py-3 border-bottom-0">
-                <h6 className="mb-0 fw-bold">Payments on {format(selectedDate, 'MMMM dd, yyyy')}</h6>
+                <h6 className="mb-0 fw-bold">Reminders on {format(selectedDate, 'MMMM dd, yyyy')}</h6>
               </Card.Header>
               <ListGroup variant="flush">
                 {selectedDaySubs.length > 0 ? (
@@ -106,16 +100,14 @@ export default function CalendarView() {
                     <ListGroup.Item key={rem.id} className="py-3 bg-transparent border-0 border-bottom">
                       <div className="d-flex justify-content-between align-items-center mb-1">
                         <div className="d-flex align-items-center">
-                          <Logo name={rem.Name} url={rem.URL} manualLogo={rem.ManualLogo} />
                           <span className="fw-medium text-truncate" style={{ maxWidth: '120px' }}>{rem.Name}</span>
                         </div>
-                        <span className="fw-bold small">{rem.Price}</span>
                       </div>
                     </ListGroup.Item>
                   ))
                 ) : (
                   <div className="p-4 text-center text-muted">
-                    No payments scheduled.
+                    No reminders scheduled.
                   </div>
                 )}
               </ListGroup>
@@ -169,10 +161,6 @@ export default function CalendarView() {
           .tile-rem-name {
             flex: 1;
             margin-right: 4px;
-          }
-          .tile-rem-price {
-            font-weight: bold;
-            opacity: 0.9;
           }
           .react-calendar__navigation button {
             font-weight: bold;

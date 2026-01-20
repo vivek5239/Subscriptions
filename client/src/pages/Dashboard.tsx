@@ -1,17 +1,15 @@
 import { useEffect, useState } from 'react';
 import axios from 'axios';
-import { Card, Table, Container, Row, Col, Badge, Spinner, Button, Form, InputGroup } from 'react-bootstrap';
-import { Bell, Bot, Sparkles, CheckCircle, PlusCircle, Clock, CalendarX } from 'lucide-react';
+import { Card, Container, Row, Col, Badge, Spinner, Button, Form, InputGroup } from 'react-bootstrap';
+import { CheckCircle, PlusCircle, Clock, CalendarX } from 'lucide-react';
 import { format, parseISO, differenceInDays } from 'date-fns';
 import type { DashboardData, Reminder } from '../types';
-import { Logo } from '../components/Logo';
 
 export default function Dashboard() {
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [aiLoading, setAiLoading] = useState(false);
-  const [aiResponse, setAiResponse] = useState<string | null>(null);
   const [nlReminderText, setNlReminderText] = useState('');
+  const [nlReminderLoading, setNlReminderLoading] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -37,27 +35,6 @@ export default function Dashboard() {
     }
   };
 
-  const runAiAnalysis = async () => {
-    const config = JSON.parse(localStorage.getItem('rem_app_config') || '{}');
-    if (!config.groqApiKey) {
-      alert('Please set your Groq API Key in Settings first!');
-      return;
-    }
-
-    setAiLoading(true);
-    setAiResponse(null);
-    try {
-      const res = await axios.post('/api/ai/analyze', { 
-        apiKey: config.groqApiKey 
-      });
-      setAiResponse(res.data.analysis);
-    } catch (err: any) {
-      alert(err.response?.data?.error || 'AI Analysis failed');
-    } finally {
-      setAiLoading(false);
-    }
-  };
-
   const handleNlReminderSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!nlReminderText.trim()) return;
@@ -68,19 +45,18 @@ export default function Dashboard() {
       return;
     }
 
-    setAiLoading(true); // Reusing aiLoading for reminder creation feedback
+    setNlReminderLoading(true);
     try {
-      // API endpoint for natural language reminder creation (to be implemented)
-      await axios.post('/api/ai/create-reminder', { 
+      await axios.post('/api/ai/create-reminder', {
         text: nlReminderText,
-        apiKey: config.groqApiKey 
+        apiKey: config.groqApiKey
       });
       setNlReminderText('');
       fetchData(); // Refresh reminders
     } catch (err: any) {
       alert(err.response?.data?.error || 'Failed to create reminder via AI');
     } finally {
-      setAiLoading(false);
+      setNlReminderLoading(false);
     }
   };
 
@@ -118,10 +94,8 @@ export default function Dashboard() {
             <div key={rem.id} className="list-group-item px-3 py-3 bg-transparent border-0 border-bottom">
               <div className="d-flex justify-content-between align-items-center mb-1">
                 <div className="d-flex align-items-center">
-                   <Logo name={rem.Name} url={rem.URL} manualLogo={rem.ManualLogo} />
                    <span className="fw-medium">{rem.Name}</span>
                 </div>
-                <span className="fw-bold">{rem.Price}</span>
               </div>
               <div className="d-flex justify-content-between align-items-center small mt-2">
                 <span className="text-muted">{format(parseISO(rem['Next Payment']), 'MMM dd, yyyy')}</span>
@@ -130,12 +104,12 @@ export default function Dashboard() {
                     <Badge bg={isOverdue ? 'danger' : isToday ? 'warning' : 'info'} className="rounded-pill">
                       {isOverdue ? `Overdue ${Math.abs(daysLeft)}d` : isToday ? 'Today' : `In ${daysLeft} days`}
                     </Badge>
-                    <Button 
-                      variant="outline-success" 
-                      size="sm" 
+                    <Button
+                      variant="outline-success"
+                      size="sm"
                       className="rounded-circle p-1 d-flex align-items-center justify-content-center"
                       style={{ width: 24, height: 24 }}
-                      title="Mark as Paid"
+                      title="Mark as Done"
                       onClick={() => handleMarkPaid(rem.id)}
                     >
                       <CheckCircle size={14} />
@@ -169,111 +143,15 @@ export default function Dashboard() {
                             placeholder="Create a reminder... e.g., 'Pay electricity bill on the 25th of every month'"
                             value={nlReminderText}
                             onChange={(e) => setNlReminderText(e.target.value)}
-                            disabled={aiLoading}
+                            disabled={nlReminderLoading}
                         />
-                        <Button variant="primary" type="submit" disabled={aiLoading}>
-                            {aiLoading ? <Spinner size="sm" animation="border" /> : <PlusCircle size={20} />}
+                        <Button variant="primary" type="submit" disabled={nlReminderLoading}>
+                            {nlReminderLoading ? <Spinner size="sm" animation="border" /> : <PlusCircle size={20} />}
                             <span className="d-none d-sm-inline ms-2">Create Reminder</span>
                         </Button>
                     </InputGroup>
                 </Form>
             </Card.Body>
-        </Card>
-
-        {/* KPI Cards Row */}
-        <Row className="mb-4 g-3">
-          <Col md={4} lg={2}>
-            <Card className="shadow-sm h-100">
-              <Card.Body className="p-3">
-                <h6 className="text-muted small text-uppercase mb-2">Monthly Cost</h6>
-                <h4 className="mb-0">₹{data?.stats.totalMonthlyINR.toFixed(0)}</h4>
-              </Card.Body>
-            </Card>
-          </Col>
-          <Col md={4} lg={2}>
-            <Card className="shadow-sm h-100">
-              <Card.Body className="p-3">
-                <h6 className="text-muted small text-uppercase mb-2">Yearly Cost</h6>
-                <h4 className="mb-0">₹{data?.stats.totalYearlyINR.toFixed(0)}</h4>
-              </Card.Body>
-            </Card>
-          </Col>
-          <Col md={4} lg={2}>
-            <Card className="shadow-sm h-100">
-              <Card.Body className="p-3">
-                <h6 className="text-muted small text-uppercase mb-2">Due This Month</h6>
-                <h4 className="mb-0 text-danger">₹{data?.stats.dueThisMonthINR.toFixed(0)}</h4>
-              </Card.Body>
-            </Card>
-          </Col>
-          <Col md={4} lg={2}>
-            <Card className="shadow-sm h-100">
-              <Card.Body className="p-3">
-                <h6 className="text-muted small text-uppercase mb-2">Avg Monthly</h6>
-                <h4 className="mb-0">₹{data?.stats.averageMonthlyINR.toFixed(0)}</h4>
-              </Card.Body>
-            </Card>
-          </Col>
-          <Col md={4} lg={2}>
-            <Card className="shadow-sm h-100">
-              <Card.Body className="p-3">
-                <h6 className="text-muted small text-uppercase mb-2">Most Expensive</h6>
-                <div className="d-flex align-items-center">
-                   {data?.stats.mostExpensive && (
-                     <Logo 
-                       name={data.stats.mostExpensive.Name} 
-                       url={data.stats.mostExpensive.URL} 
-                       manualLogo={data.stats.mostExpensive.ManualLogo}
-                       size={24} 
-                     />
-                   )}
-                   <div className="d-flex flex-column text-truncate">
-                      <span className="fw-bold text-truncate" title={data?.stats.mostExpensive?.Name}>
-                        {data?.stats.mostExpensive?.Name || '-'}
-                      </span>
-                      <span className="small text-muted">₹{data?.stats.mostExpensive?.valueINR.toFixed(0)}</span>
-                   </div>
-                </div>
-              </Card.Body>
-            </Card>
-          </Col>
-          <Col md={4} lg={2}>
-            <Card className="shadow-sm h-100">
-              <Card.Body className="p-3">
-                <h6 className="text-muted small text-uppercase mb-2">Active Rems</h6>
-                <h4 className="mb-0">{data?.reminders.filter(s => s.Active === 'Yes').length}</h4>
-              </Card.Body>
-            </Card>
-          </Col>
-        </Row>
-
-        {/* AI Reminder Insights Section */}
-        <Card className="shadow-sm mb-4 bg-gradient-primary text-white border-0">
-          <Card.Body className="p-4">
-            <div className="d-flex justify-content-between align-items-center mb-3">
-              <h5 className="mb-0 d-flex align-items-center gap-2">
-                <Bot size={24} />
-                AI Reminder Insights
-              </h5>
-              <Button 
-                variant="light" 
-                size="sm" 
-                className="rounded-pill px-3 d-flex align-items-center gap-2 shadow-sm"
-                onClick={runAiAnalysis}
-                disabled={aiLoading}
-              >
-                {aiLoading ? <Spinner size="sm" /> : <Sparkles size={16} />}
-                {aiLoading ? 'Analyzing...' : 'Generate Insights'}
-              </Button>
-            </div>
-            {aiResponse ? (
-              <div className="bg-body text-body p-3 rounded shadow-sm border" style={{ maxHeight: '300px', overflowY: 'auto' }}>
-                <pre style={{ whiteSpace: 'pre-wrap', fontFamily: 'inherit', marginBottom: 0 }}>{aiResponse}</pre>
-              </div>
-            ) : (
-              <p className="mb-0 opacity-75">Click the button above to have Groq AI analyze your reminders and suggest savings.</p>
-            )}
-          </Card.Body>
         </Card>
 
         <Row className="g-4">

@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { Modal, Button, Form, Row, Col } from 'react-bootstrap';
 import axios from 'axios';
 import type { Reminder } from '../types';
-import { Logo } from './Logo';
 
 interface ReminderModalProps {
   show: boolean;
@@ -12,29 +11,15 @@ interface ReminderModalProps {
 }
 
 const CATEGORIES = [
-  'Entertainment',
-  'Utilities',
-  'Productivity',
+  'General',
+  'Work',
+  'Personal',
+  'Health',
+  'Finance',
+  'Appointments',
+  'Study',
+  'Travel',
   'Shopping',
-  'Health & Fitness',
-  'Food & Drink',
-  'Education',
-  'Transportation',
-  'Housing',
-  'Insurance',
-  'Other'
-];
-
-const PAYMENT_METHODS = [
-  'Credit Card',
-  'Debit Card',
-  'Direct Debit',
-  'PayPal',
-  'UPI',
-  'Net Banking',
-  'Cash',
-  'Apple Pay',
-  'Google Pay',
   'Other'
 ];
 
@@ -50,16 +35,10 @@ const TAMIL_MONTHS = [
 export default function ReminderModal({ show, onHide, onSave, reminder }: ReminderModalProps) {
   const [formData, setFormData] = useState<Partial<Reminder>>({
     Name: '',
-    Price: '',
-    'Payment Cycle': 'Monthly',
     'Next Payment': new Date().toISOString().split('T')[0],
-    Category: 'Utilities',
+    Category: 'General',
     Active: 'Yes',
-    Renewal: 'Automatic',
-    'Payment Method': 'Credit Card',
     Notes: '',
-    URL: '',
-    ManualLogo: ''
   });
   const [useTamilDate, setUseTamilDate] = useState(false);
   const [tamilMonth, setTamilMonth] = useState(0); // Index of TAMIL_MONTHS
@@ -68,25 +47,16 @@ export default function ReminderModal({ show, onHide, onSave, reminder }: Remind
   useEffect(() => {
     if (reminder) {
       setFormData({
-        ...reminder,
-        ManualLogo: reminder.ManualLogo || ''
+        ...reminder
       });
-      // Assuming 'Next Payment' is always Gregorian, if we ever stored Tamil dates
-      // we'd need conversion logic here to set tamilMonth/tamilDay correctly.
-      setUseTamilDate(false); // Default to English date view for existing reminders
+      setUseTamilDate(false); 
     } else {
       setFormData({
         Name: '',
-        Price: '',
-        'Payment Cycle': 'Monthly',
         'Next Payment': new Date().toISOString().split('T')[0],
-        Category: 'Utilities',
+        Category: 'General',
         Active: 'Yes',
-        Renewal: 'Automatic',
-        'Payment Method': 'Credit Card',
         Notes: '',
-        URL: '',
-        ManualLogo: ''
       });
       setUseTamilDate(false);
       setTamilMonth(0);
@@ -113,18 +83,6 @@ export default function ReminderModal({ show, onHide, onSave, reminder }: Remind
     convertTamilDate();
   }, [useTamilDate, tamilMonth, tamilDay]);
 
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setFormData({ ...formData, ManualLogo: reader.result as string });
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onSave(formData);
@@ -139,54 +97,22 @@ export default function ReminderModal({ show, onHide, onSave, reminder }: Remind
       <Form onSubmit={handleSubmit}>
         <Modal.Body>
           <Row className="mb-3">
-            <Form.Group as={Col} md={6}>
+            <Form.Group as={Col} md={12}>
               <Form.Label>Reminder Name</Form.Label>
-              <div className="d-flex align-items-center gap-2">
-                {formData.Name && (
-                  <Logo 
-                    name={formData.Name} 
-                    url={formData.URL} 
-                    manualLogo={formData.ManualLogo} 
-                    size={38} 
-                  />
-                )}
-                <Form.Control
-                  required
-                  type="text"
-                  placeholder="e.g. Netflix"
-                  value={formData.Name}
-                  onChange={(e) => setFormData({ ...formData, Name: e.target.value })}
-                />
-              </div>
-            </Form.Group>
-            <Form.Group as={Col} md={6}>
-              <Form.Label>Price (with currency)</Form.Label>
               <Form.Control
                 required
                 type="text"
-                placeholder="e.g. ₹499 or $9.99"
-                value={formData.Price}
-                onChange={(e) => setFormData({ ...formData, Price: e.target.value })}
+                placeholder="e.g. Call Mom"
+                value={formData.Name}
+                onChange={(e) => setFormData({ ...formData, Name: e.target.value })}
               />
             </Form.Group>
           </Row>
 
           <Row className="mb-3">
             <Form.Group as={Col} md={6}>
-              <Form.Label>Payment Cycle</Form.Label>
-              <Form.Select
-                value={formData['Payment Cycle']}
-                onChange={(e) => setFormData({ ...formData, 'Payment Cycle': e.target.value })}
-              >
-                <option value="Monthly">Monthly</option>
-                <option value="Yearly">Yearly</option>
-                <option value="Quarterly">Quarterly</option>
-                <option value="One-time">One-time</option>
-              </Form.Select>
-            </Form.Group>
-            <Form.Group as={Col} md={6}>
               <Form.Label className="d-flex justify-content-between align-items-center">
-                Next Payment Date
+                Next Reminder Date
                 <Form.Check 
                   type="switch"
                   id="custom-switch"
@@ -227,9 +153,6 @@ export default function ReminderModal({ show, onHide, onSave, reminder }: Remind
                 />
               )}
             </Form.Group>
-          </Row>
-
-          <Row className="mb-3">
             <Form.Group as={Col} md={6}>
               <Form.Label>Category</Form.Label>
               <Form.Select
@@ -240,52 +163,6 @@ export default function ReminderModal({ show, onHide, onSave, reminder }: Remind
                   <option key={cat} value={cat}>{cat}</option>
                 ))}
               </Form.Select>
-            </Form.Group>
-            <Form.Group as={Col} md={6}>
-              <Form.Label>Payment Method</Form.Label>
-              <Form.Select
-                value={formData['Payment Method']}
-                onChange={(e) => setFormData({ ...formData, 'Payment Method': e.target.value })}
-              >
-                {PAYMENT_METHODS.map(method => (
-                  <option key={method} value={method}>{method}</option>
-                ))}
-              </Form.Select>
-            </Form.Group>
-          </Row>
-
-          <Row className="mb-3">
-            <Form.Group as={Col} md={6}>
-              <Form.Label>Website URL (for Auto Logo)</Form.Label>
-              <Form.Control
-                type="text"
-                placeholder="e.g. netflix.com"
-                value={formData.URL}
-                onChange={(e) => setFormData({ ...formData, URL: e.target.value })}
-              />
-            </Form.Group>
-            <Form.Group as={Col} md={6}>
-              <Form.Label>Manual Logo URL (Optional)</Form.Label>
-              <Form.Control
-                type="text"
-                placeholder="https://example.com/logo.png"
-                value={formData.ManualLogo}
-                onChange={(e) => setFormData({ ...formData, ManualLogo: e.target.value })}
-              />
-            </Form.Group>
-          </Row>
-
-          <Row className="mb-3">
-            <Form.Group as={Col} md={12}>
-              <Form.Label>Or Upload Logo Image</Form.Label>
-              <Form.Control
-                type="file"
-                accept="image/*"
-                onChange={handleFileChange}
-              />
-              <Form.Text className="text-muted">
-                If provided, the manual logo (URL or Upload) will override the automatic one.
-              </Form.Text>
             </Form.Group>
           </Row>
 

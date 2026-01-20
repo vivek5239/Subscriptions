@@ -8,7 +8,6 @@ import nodemailer from 'nodemailer';
 import axios from 'axios';
 import Groq from 'groq-sdk';
 import { getAllReminders, saveReminder, deleteReminder } from './db.js';
-import { convertToINR, parsePrice, updateRates } from './currency.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -22,80 +21,11 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 // --- API Endpoints ---
 
-// Get All Reminders & Stats
+// Get All Reminders
 app.get('/api/reminders', async (req, res) => {
   try {
     const rems = await getAllReminders();
-    
-    // Calculate stats
-    let totalMonthlyINR = 0;
-    let totalYearlyINR = 0;
-    const categoryStats = {};
-
-    const enrichedSubs = rems.map(rem => {
-      const { value, currency } = parsePrice(rem.Price);
-      const valueINR = convertToINR(rem.Price);
-      
-      let monthlyCost = 0;
-      let yearlyCost = 0;
-
-      if (rem['Payment Cycle'] === 'Monthly') {
-        monthlyCost = valueINR;
-        yearlyCost = valueINR * 12;
-      } else if (rem['Payment Cycle'] === 'Yearly') {
-        monthlyCost = valueINR / 12;
-        yearlyCost = valueINR;
-      } else if (rem['Payment Cycle'] === 'Quarterly') {
-        monthlyCost = valueINR / 3;
-        yearlyCost = valueINR * 4;
-      }
-
-      if (rem['Active'] === 'Yes') {
-        totalMonthlyINR += monthlyCost;
-        totalYearlyINR += yearlyCost;
-
-        const cat = rem.Category || 'Uncategorized';
-        if (!categoryStats[cat]) categoryStats[cat] = 0;
-        categoryStats[cat] += monthlyCost;
-      }
-
-      return {
-        ...rem,
-        value,
-        currency,
-        valueINR,
-        monthlyCost,
-        yearlyCost
-      };
-    });
-
-    // Calculate advanced stats
-    const activeSubs = enrichedSubs.filter(s => s.Active === 'Yes');
-    
-    // Most Expensive
-    const mostExpensive = activeSubs.sort((a, b) => b.monthlyCost - a.monthlyCost)[0] || null;
-
-    // Amount Due This Month
-    const currentMonth = new Date().getMonth();
-    const currentYear = new Date().getFullYear();
-    
-    const dueThisMonth = activeSubs.filter(rem => {
-      if (!rem['Next Payment']) return false;
-      const date = new Date(rem['Next Payment']);
-      return date.getMonth() === currentMonth && date.getFullYear() === currentYear;
-    }).reduce((sum, rem) => sum + rem.valueINR, 0);
-
-    res.json({
-      reminders: enrichedSubs,
-      stats: {
-        totalMonthlyINR,
-        totalYearlyINR,
-        averageMonthlyINR: enrichedSubs.length ? totalMonthlyINR / enrichedSubs.length : 0,
-        mostExpensive,
-        dueThisMonthINR: dueThisMonth,
-        categoryStats
-      }
-    });
+    res.json({ reminders: rems });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Internal Server Error' });
@@ -118,50 +48,6 @@ app.delete('/api/reminders/:id', async (req, res) => {
     await deleteReminder(req.params.id);
     res.json({ success: true });
   } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// Mark Reminder as Paid (Manual)
-app.post('/api/reminders/:id/pay', async (req, res) => {
-  try {
-    const remId = req.params.id;
-    
-    const allSubs = await getAllReminders();
-    const rem = allSubs.find(s => s.id === remId);
-
-    if (!rem) {
-      return res.status(404).json({ error: 'Reminder not found' });
-    }
-
-    const currentNextPayment = new Date(rem['Next Payment']);
-    let nextDate = new Date(currentNextPayment);
-
-    switch (rem['Payment Cycle']) {
-      case 'Monthly':
-        nextDate.setMonth(nextDate.getMonth() + 1);
-        break;
-      case 'Quarterly':
-        nextDate.setMonth(nextDate.getMonth() + 3);
-        break;
-      case 'Yearly':
-        nextDate.setFullYear(nextDate.getFullYear() + 1);
-        break;
-      default:
-        // Default to monthly if unknown
-        nextDate.setMonth(nextDate.getMonth() + 1);
-    }
-    
-    const updatedSub = {
-      ...rem,
-      'Next Payment': nextDate.toISOString().split('T')[0]
-    };
-
-    await saveReminder(updatedSub);
-    res.json(updatedSub);
-
-  } catch (error) {
-    console.error('Error marking as paid:', error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -204,24 +90,24 @@ app.get('/api/settings', async (req, res) => {
   }
 });
 
-// AI Analysis Endpoint
+// AI Analysis Endpoint - Now for general Reminder Insights
 app.post('/api/ai/analyze', async (req, res) => {
   const { apiKey } = req.body;
   if (!apiKey) return res.status(400).json({ error: 'API Key is required' });
 
   try {
     const rems = await getAllReminders();
-    const activeSubs = rems.filter(s => s.Active === 'Yes');
+    const activeRems = rems.filter(s => s.Active === 'Yes');
     
     const groq = new Groq({ apiKey: apiKey });
     
     const prompt = `
-      Analyze my following reminder data and provide:
-      1. A summary of total monthly and yearly spending.
-      2. 3 specific suggestions to save money (e.g., duplicate services, high-cost items).
-      3. An assessment of whether the spending is balanced across categories.
+      Analyze my following reminders and provide:
+      1. A summary of active reminders.
+      2. 3 suggestions for better reminder management or grouping.
+      3. An assessment of how well reminders are spread across categories.
 
-      Data: ${JSON.stringify(activeSubs.map(s => ({ name: s.Name, price: s.Price, cycle: s['Payment Cycle'], category: s.Category })))} 
+      Data: ${JSON.stringify(activeRems.map(s => ({ name: s.Name, nextPayment: s['Next Payment'], category: s.Category })))} 
 
       Please provide the response in a structured Markdown format.
     `;
@@ -252,17 +138,12 @@ app.post('/api/ai/create-reminder', async (req, res) => {
       {
         "Name": "string",
         "Next Payment": "YYYY-MM-DD",
-        "Payment Cycle": "Monthly" | "Quarterly" | "Yearly" | "One-time",
-        "Price": "string (e.g., '₹500', '$10.99')",
-        "Category": "string (e.g., 'Entertainment', 'Bills', 'Shopping')",
+        "Category": "string (e.g., 'General', 'Work', 'Personal')",
         "Active": "Yes" | "No",
-        "URL": "string (optional URL for the reminder, if any)",
-        "ManualLogo": "string (optional URL for a custom logo, if any)"
+        "Notes": "string (optional notes)"
       }
       
       If a specific date is not provided, use today's date. If a year is not specified, assume the current year.
-      If it's a recurring reminder, determine the 'Payment Cycle'. If it's a one-time event, use "One-time".
-      If currency is not specified, default to '₹'.
       Ensure "Active" is always "Yes" for new reminders.
       
       Natural language text: "${text}"
@@ -284,8 +165,8 @@ app.post('/api/ai/create-reminder', async (req, res) => {
     const parsedReminder = JSON.parse(aiResponse);
 
     // Basic validation and default values for parsedReminder
-    if (!parsedReminder.Name || !parsedReminder["Next Payment"] || !parsedReminder.Price) {
-        throw new Error("AI failed to parse essential reminder details (Name, Next Payment, Price).");
+    if (!parsedReminder.Name || !parsedReminder["Next Payment"]) {
+        throw new Error("AI failed to parse essential reminder details (Name, Next Payment).");
     }
 
     // Ensure 'Next Payment' is a valid date
@@ -440,7 +321,7 @@ async function runDailyReminderCheck() {
       }
 
       let message = `You have ${dueSoon.length} reminders due soon:\n` + 
-                      dueSoon.map(s => `- ${s.Name} (${s.Price}) due on ${s['Next Payment']}`).join('\n');
+                      dueSoon.map(s => `- ${s.Name} due on ${s['Next Payment']}`).join('\n');
 
       // AI Summary Integration
       if (config.groqApiKey) {
@@ -449,10 +330,10 @@ async function runDailyReminderCheck() {
           const groq = new Groq({ apiKey: config.groqApiKey });
           const aiPrompt = `
             I have the following reminders due soon. Please write a very concise, friendly, and professional reminder message for an email and push notification.
-            List the items clearly with their prices and due dates.
+            List the items clearly with their due dates.
             
             Reminders:
-            ${dueSoon.map(s => `- ${s.Name}: ${s.Price}, due on ${s['Next Payment']}`).join('\n')}
+            ${dueSoon.map(s => `- ${s.Name} due on ${s['Next Payment']}`).join('\n')}
           `;
 
           const chatCompletion = await groq.chat.completions.create({
@@ -473,11 +354,11 @@ async function runDailyReminderCheck() {
       if (config.notificationsEnabled !== false) {
         let sent = false;
         if (config.gotifyUrl && config.gotifyToken) {
-          await sendGotifyNotification(config, 'Upcoming Payments', message);
+          await sendGotifyNotification(config, 'Upcoming Reminders', message);
           sent = true;
         }
         if (config.smtpHost && config.smtpUser) {
-          await sendEmailNotification(config, 'Upcoming Payments Reminder', message);
+          await sendEmailNotification(config, 'Upcoming Reminders Notification', message);
           sent = true;
         }
         return { success: true, message: sent ? `Sent notifications for ${dueSoon.length} items.` : 'No notification channels configured.' };
@@ -508,8 +389,8 @@ app.post('/api/test/reminders', async (req, res) => {
 app.post('/api/test/gotify', async (req, res) => {
   try {
     const rems = await getAllReminders();
-    const activeSubs = rems.filter(s => s.Active === 'Yes');
-    const message = `Test Notification\n\nYou have ${activeSubs.length} active reminders.\nTotal Monthly: ₹${activeSubs.reduce((sum, s) => sum + convertToINR(s.Price), 0).toFixed(2)}`;
+    const activeRems = rems.filter(s => s.Active === 'Yes');
+    const message = `Test Notification\n\nYou have ${activeRems.length} active reminders.`;
     
     await sendGotifyNotification(req.body, 'Reminders App Test', message);
     res.json({ success: true });
@@ -521,9 +402,9 @@ app.post('/api/test/gotify', async (req, res) => {
 app.post('/api/test/email', async (req, res) => {
   try {
     const rems = await getAllReminders();
-    const activeSubs = rems.filter(s => s.Active === 'Yes');
+    const activeRems = rems.filter(s => s.Active === 'Yes');
     const message = `This is a test email from your Reminders App.\n\nYour active reminders:\n` + 
-                    activeSubs.map(s => `- ${s.Name}: ${s.Price}`).join('\n');
+                    activeRems.map(s => `- ${s.Name}`).join('\n');
     
     await sendEmailNotification(req.body, 'Reminders App Test', message, req.body.testRecipient);
     res.json({ success: true });
@@ -533,8 +414,6 @@ app.post('/api/test/email', async (req, res) => {
 });
 
 const settingsPath = path.join(__dirname, '../data/settings.json');
-
-// ... (keep existing code) ...
 
 let dailyReminderJob;
 
@@ -566,16 +445,8 @@ function scheduleDailyReminder() {
     });
 }
 
-// Update exchange rates daily at midnight
-cron.schedule('0 0 * * *', async () => {
-  console.log('Running daily exchange rate update...');
-  await updateRates();
-});
-
 app.listen(PORT, async () => {
   console.log(`Server running on http://localhost:${PORT}`);
-  // Initial rates update
-  await updateRates();
   // Schedule the daily reminder job
   scheduleDailyReminder();
 });
