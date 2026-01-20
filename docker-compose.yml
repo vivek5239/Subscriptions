@@ -1,10 +1,10 @@
 version: '3.8'
 
 services:
-  subscriptions:
+  reminders:
     build: .
-    image: subscriptions-app
-    container_name: subscriptions
+    image: reminders-app
+    container_name: reminders
     restart: unless-stopped
     ports:
       - "5005:5000"

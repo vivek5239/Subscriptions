@@ -1,35 +1,16 @@
 import React, { useState } from 'react';
-import { BrowserRouter, Routes, Route, NavLink, Navigate, useLocation } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, NavLink } from 'react-router-dom';
 import { Container, Nav, Navbar, Offcanvas, Button } from 'react-bootstrap';
-import { LayoutDashboard, Calendar, Settings, Menu, CreditCard, PieChart, Sun, Moon, LogOut } from 'lucide-react';
+import { LayoutDashboard, Calendar, Settings, Menu, CreditCard, Sun, Moon } from 'lucide-react';
 import Dashboard from './pages/Dashboard';
-import Subscriptions from './pages/Subscriptions';
+import Reminders from './pages/Reminders';
 import CalendarView from './pages/CalendarView';
 import SettingsView from './pages/SettingsView';
-import StatsView from './pages/StatsView';
-import AuthPage from './pages/Auth';
 import { useTheme } from './context/ThemeContext';
-import { useAuth } from './context/AuthContext';
-
-function ProtectedRoute({ children }: { children: React.ReactElement }) {
-  const { user, isLoading } = useAuth();
-  const location = useLocation();
-
-  if (isLoading) {
-    return <div className="d-flex justify-content-center align-items-center min-vh-100">Loading...</div>;
-  }
-
-  if (!user) {
-    return <Navigate to="/auth" state={{ from: location }} replace />;
-  }
-
-  return children;
-}
 
 function AppLayout({ children }: { children: React.ReactNode }) {
   const [showMenu, setShowMenu] = useState(false);
   const { mode: theme, toggleMode: toggleTheme } = useTheme();
-  const { logout, user } = useAuth();
 
   return (
     <div className="min-vh-100 d-flex flex-column">
@@ -46,7 +27,7 @@ function AppLayout({ children }: { children: React.ReactNode }) {
               </button>
               <Navbar.Brand className="d-flex align-items-center gap-2 fw-bold fs-4" href="/">
                 <CreditCard size={28} />
-                Subscriptions
+                Reminders
               </Navbar.Brand>
             </div>
             
@@ -72,9 +53,6 @@ function AppLayout({ children }: { children: React.ReactNode }) {
         </Offcanvas.Header>
         <Offcanvas.Body className="p-0 d-flex flex-column">
           <Nav className="flex-column p-2 flex-grow-1">
-            <div className="px-3 py-2 mb-2 text-muted small">
-              Signed in as <br/> <strong>{user?.email}</strong>
-            </div>
             <NavLink 
               to="/" 
               className={({ isActive }) => `nav-link d-flex align-items-center gap-3 px-3 py-3 rounded mb-1 ${isActive ? 'bg-primary text-white' : 'hover-bg-theme'}`}
@@ -83,18 +61,11 @@ function AppLayout({ children }: { children: React.ReactNode }) {
               <LayoutDashboard size={20} /> Dashboard
             </NavLink>
             <NavLink 
-              to="/subscriptions" 
+              to="/reminders" 
               className={({ isActive }) => `nav-link d-flex align-items-center gap-3 px-3 py-3 rounded mb-1 ${isActive ? 'bg-primary text-white' : 'hover-bg-theme'}`}
               onClick={() => setShowMenu(false)}
             >
-              <CreditCard size={20} /> All Subscriptions
-            </NavLink>
-            <NavLink 
-              to="/stats" 
-              className={({ isActive }) => `nav-link d-flex align-items-center gap-3 px-3 py-3 rounded mb-1 ${isActive ? 'bg-primary text-white' : 'hover-bg-theme'}`}
-              onClick={() => setShowMenu(false)}
-            >
-              <PieChart size={20} /> Statistics
+              <CreditCard size={20} /> All Reminders
             </NavLink>
             <NavLink 
               to="/calendar" 
@@ -112,15 +83,6 @@ function AppLayout({ children }: { children: React.ReactNode }) {
               <Settings size={20} /> Settings
             </NavLink>
           </Nav>
-          <div className="p-2 border-top">
-            <Button 
-              variant="outline-danger" 
-              className="w-100 d-flex align-items-center justify-content-center gap-2"
-              onClick={() => { logout(); setShowMenu(false); }}
-            >
-              <LogOut size={18} /> Logout
-            </Button>
-          </div>
         </Offcanvas.Body>
       </Offcanvas>
 
@@ -136,46 +98,28 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/auth" element={<AuthPage />} />
-        
         <Route path="/" element={
-          <ProtectedRoute>
             <AppLayout>
               <Dashboard />
             </AppLayout>
-          </ProtectedRoute>
         } />
         
-        <Route path="/subscriptions" element={
-          <ProtectedRoute>
+        <Route path="/reminders" element={
             <AppLayout>
-              <Subscriptions />
+              <Reminders />
             </AppLayout>
-          </ProtectedRoute>
-        } />
-        
-        <Route path="/stats" element={
-          <ProtectedRoute>
-            <AppLayout>
-              <StatsView />
-            </AppLayout>
-          </ProtectedRoute>
         } />
         
         <Route path="/calendar" element={
-          <ProtectedRoute>
             <AppLayout>
               <CalendarView />
             </AppLayout>
-          </ProtectedRoute>
         } />
         
         <Route path="/settings" element={
-          <ProtectedRoute>
             <AppLayout>
               <SettingsView />
             </AppLayout>
-          </ProtectedRoute>
         } />
       </Routes>
     </BrowserRouter>

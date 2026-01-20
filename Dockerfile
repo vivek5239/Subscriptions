@@ -1,21 +1,21 @@
 # Stage 1: Build React Client
 FROM node:18-alpine AS client-build
 WORKDIR /app/client
-COPY client/package*.json ./
+COPY ./client/package*.json ./
 RUN npm install
-COPY client/ ./
+COPY ./client/ ./
 RUN npm run build
 
 # Stage 2: Production Server
 FROM node:18-alpine
-WORKDIR /app
+WORKDIR /app/server
 
 # Install server dependencies
-COPY server/package*.json ./
+COPY ./server/package*.json ./
 RUN npm install --production
 
 # Copy server code
-COPY server/ ./
+COPY ./server/ ./
 
 # Copy built client assets to 'public' folder in server
 COPY --from=client-build /app/client/dist ./public

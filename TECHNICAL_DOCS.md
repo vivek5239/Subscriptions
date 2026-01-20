@@ -1,12 +1,12 @@
-# Technical Documentation: Subscriptions
+# Technical Documentation: Reminders
 
 ## 1. Architecture Overview
 
-**Subscriptions** is a full-stack web application designed to track and manage recurring subscriptions. It follows a **Monolithic Repository (Monorepo)** structure but separates concerns into a distinct Client (Frontend) and Server (Backend).
+**Reminders** is a full-stack web application designed to track and manage recurring reminders. It follows a **Monolithic Repository (Monorepo)** structure but separates concerns into a distinct Client (Frontend) and Server (Backend).
 
 *   **Frontend**: Single Page Application (SPA) built with React and TypeScript.
 *   **Backend**: RESTful API built with Node.js and Express.
-*   **Database**: JSON-based flat-file storage (`subscriptions.json`), ensuring portability and simplicity without the overhead of a SQL database.
+*   **Database**: JSON-based flat-file storage (`reminders.json`), ensuring portability and simplicity without the overhead of a SQL database.
 *   **Deployment**: Containerized using Docker, serving both the API and the static frontend assets from a single container.
 
 ## 2. Tech Stack
@@ -29,20 +29,20 @@
 
 ## 3. Data Flow
 
-1.  **Read**: The React Client requests `GET /api/subscriptions`.
+1.  **Read**: The React Client requests `GET /api/reminders`.
 2.  **Process**:
-    *   The Express Server reads `data/subscriptions.json`.
+    *   The Express Server reads `data/reminders.json`.
     *   It iterates through records, parsing `Price` strings (e.g., "$10", "₹500").
     *   It applies a conversion rate (defined in `currency.js`) to normalize all values to **INR**.
     *   It calculates KPIs (Monthly Total, Yearly Total, Active Count).
     *   It identifies "Upcoming Payments" based on the `Next Payment` date.
 3.  **Response**: The server returns an enriched JSON object containing both the raw list and the calculated statistics.
-4.  **Render**: The Client receives the data and renders the Dashboard and Subscription Table.
+4.  **Render**: The Client receives the data and renders the Dashboard and Reminder Table.
 
 ## 4. Directory Structure
 
 ```text
-Subscriptions/
+Reminders/
 ├── client/                 # React Frontend
 │   ├── src/
 │   │   ├── App.tsx         # Main Component (Dashboard Logic)
@@ -55,7 +55,7 @@ Subscriptions/
 │   ├── currency.js         # Currency Conversion Logic
 │   └── public/             # Static assets (populated during Docker build)
 ├── data/                   # Data Storage
-│   └── subscriptions.json  # The "Database"
+│   └── reminders.json  # The "Database"
 ├── Dockerfile              # Multi-stage build definition
 ├── docker-compose.yml      # Container orchestration
 └── README.md               # User Guide
@@ -65,9 +65,9 @@ Subscriptions/
 
 | Method | Endpoint | Description |
 | :--- | :--- | :--- |
-| `GET` | `/api/subscriptions` | Returns all subscriptions and calculated Dashboard Stats. |
-| `POST` | `/api/subscriptions` | Creates or Updates a subscription (Upsert). |
-| `DELETE` | `/api/subscriptions/:id` | Deletes a subscription by ID. |
+| `GET` | `/api/reminders` | Returns all reminders and calculated Dashboard Stats. |
+| `POST` | `/api/reminders` | Creates or Updates a reminder (Upsert). |
+| `DELETE` | `/api/reminders/:id` | Deletes a reminder by ID. |
 | `GET` | `/*` | Serves the React Client (SPA Fallback) for non-API requests. |
 
 ## 6. Logic Highlights
@@ -97,13 +97,13 @@ The `Dockerfile` utilizes a **Multi-Stage Build** to minimize image size:
     *   Exposes Port 5000.
 
 **Volume Mapping**:
-The `docker-compose.yml` maps the host's `./data` folder to `/data` inside the container. This ensures that `subscriptions.json` persists even if the container is destroyed.
+The `docker-compose.yml` maps the host's `./data` folder to `/data` inside the container. This ensures that `reminders.json` persists even if the container is destroyed.
 
 ## 8. Future Roadmap
 
 1.  **Groq AI Integration**:
 
-*   Implement an endpoint `/api/analyze` that sends the subscription JSON to Groq's llama-3.3-70b-versatile model.
+*   Implement an endpoint `/api/analyze` that sends the reminder JSON to Groq's llama-3.3-70b-versatile model.
 
 
 

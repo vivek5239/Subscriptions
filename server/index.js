@@ -7,10 +7,8 @@ import cron from 'node-cron';
 import nodemailer from 'nodemailer';
 import axios from 'axios';
 import Groq from 'groq-sdk';
-import { getAllSubscriptions, saveSubscription, deleteSubscription, findUserById, saveUser } from './db.js';
+import { getAllReminders, saveReminder, deleteReminder } from './db.js';
 import { convertToINR, parsePrice, updateRates } from './currency.js';
-import authRouter from './routes/auth.js';
-import { authenticateToken } from './middleware/auth.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -22,77 +20,47 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// --- Auth Routes ---
-app.use('/api/auth', authRouter);
-
-// --- User Preferences Routes ---
-
-app.get('/api/user/preferences', authenticateToken, async (req, res) => {
-  try {
-    const user = await findUserById(req.user.id);
-    if (!user) return res.status(404).json({ error: 'User not found' });
-    res.json(user.preferences || { mode: 'light', color: 'purple' });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
-app.put('/api/user/preferences', authenticateToken, async (req, res) => {
-  try {
-    const user = await findUserById(req.user.id);
-    if (!user) return res.status(404).json({ error: 'User not found' });
-
-    user.preferences = { ...user.preferences, ...req.body };
-    await saveUser(user);
-    
-    res.json({ success: true, preferences: user.preferences });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
 // --- API Endpoints ---
 
-// Get All Subscriptions & Stats
-app.get('/api/subscriptions', authenticateToken, async (req, res) => {
+// Get All Reminders & Stats
+app.get('/api/reminders', async (req, res) => {
   try {
-    const userId = req.user.id;
-    const subs = await getAllSubscriptions(userId);
+    const rems = await getAllReminders();
     
     // Calculate stats
     let totalMonthlyINR = 0;
     let totalYearlyINR = 0;
     const categoryStats = {};
 
-    const enrichedSubs = subs.map(sub => {
-      const { value, currency } = parsePrice(sub.Price);
-      const valueINR = convertToINR(sub.Price);
+    const enrichedSubs = rems.map(rem => {
+      const { value, currency } = parsePrice(rem.Price);
+      const valueINR = convertToINR(rem.Price);
       
       let monthlyCost = 0;
       let yearlyCost = 0;
 
-      if (sub['Payment Cycle'] === 'Monthly') {
+      if (rem['Payment Cycle'] === 'Monthly') {
         monthlyCost = valueINR;
         yearlyCost = valueINR * 12;
-      } else if (sub['Payment Cycle'] === 'Yearly') {
+      } else if (rem['Payment Cycle'] === 'Yearly') {
         monthlyCost = valueINR / 12;
         yearlyCost = valueINR;
-      } else if (sub['Payment Cycle'] === 'Quarterly') {
+      } else if (rem['Payment Cycle'] === 'Quarterly') {
         monthlyCost = valueINR / 3;
         yearlyCost = valueINR * 4;
       }
 
-      if (sub['Active'] === 'Yes') {
+      if (rem['Active'] === 'Yes') {
         totalMonthlyINR += monthlyCost;
         totalYearlyINR += yearlyCost;
 
-        const cat = sub.Category || 'Uncategorized';
+        const cat = rem.Category || 'Uncategorized';
         if (!categoryStats[cat]) categoryStats[cat] = 0;
         categoryStats[cat] += monthlyCost;
       }
 
       return {
-        ...sub,
+        ...rem,
         value,
         currency,
         valueINR,
@@ -111,14 +79,14 @@ app.get('/api/subscriptions', authenticateToken, async (req, res) => {
     const currentMonth = new Date().getMonth();
     const currentYear = new Date().getFullYear();
     
-    const dueThisMonth = activeSubs.filter(sub => {
-      if (!sub['Next Payment']) return false;
-      const date = new Date(sub['Next Payment']);
+    const dueThisMonth = activeSubs.filter(rem => {
+      if (!rem['Next Payment']) return false;
+      const date = new Date(rem['Next Payment']);
       return date.getMonth() === currentMonth && date.getFullYear() === currentYear;
-    }).reduce((sum, sub) => sum + sub.valueINR, 0);
+    }).reduce((sum, rem) => sum + rem.valueINR, 0);
 
     res.json({
-      subscriptions: enrichedSubs,
+      reminders: enrichedSubs,
       stats: {
         totalMonthlyINR,
         totalYearlyINR,
@@ -134,43 +102,42 @@ app.get('/api/subscriptions', authenticateToken, async (req, res) => {
   }
 });
 
-// Save Subscription
-app.post('/api/subscriptions', authenticateToken, async (req, res) => {
+// Save Reminder
+app.post('/api/reminders', async (req, res) => {
   try {
-    const sub = await saveSubscription(req.body, req.user.id);
-    res.json(sub);
+    const rem = await saveReminder(req.body);
+    res.json(rem);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 });
 
-// Delete Subscription
-app.delete('/api/subscriptions/:id', authenticateToken, async (req, res) => {
+// Delete Reminder
+app.delete('/api/reminders/:id', async (req, res) => {
   try {
-    await deleteSubscription(req.params.id, req.user.id);
+    await deleteReminder(req.params.id);
     res.json({ success: true });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 });
 
-// Mark Subscription as Paid (Manual)
-app.post('/api/subscriptions/:id/pay', authenticateToken, async (req, res) => {
+// Mark Reminder as Paid (Manual)
+app.post('/api/reminders/:id/pay', async (req, res) => {
   try {
-    const userId = req.user.id;
-    const subId = req.params.id;
+    const remId = req.params.id;
     
-    const allSubs = await getAllSubscriptions(userId);
-    const sub = allSubs.find(s => s.id === subId);
+    const allSubs = await getAllReminders();
+    const rem = allSubs.find(s => s.id === remId);
 
-    if (!sub) {
-      return res.status(404).json({ error: 'Subscription not found' });
+    if (!rem) {
+      return res.status(404).json({ error: 'Reminder not found' });
     }
 
-    const currentNextPayment = new Date(sub['Next Payment']);
+    const currentNextPayment = new Date(rem['Next Payment']);
     let nextDate = new Date(currentNextPayment);
 
-    switch (sub['Payment Cycle']) {
+    switch (rem['Payment Cycle']) {
       case 'Monthly':
         nextDate.setMonth(nextDate.getMonth() + 1);
         break;
@@ -184,19 +151,13 @@ app.post('/api/subscriptions/:id/pay', authenticateToken, async (req, res) => {
         // Default to monthly if unknown
         nextDate.setMonth(nextDate.getMonth() + 1);
     }
-
-    // Handle end-of-month edge cases (e.g., Jan 31 -> Feb 28/29)
-    // Date object automatically handles rollover (Jan 31 + 1 month -> March 3 or 2), 
-    // but typically for subscriptions we want to stick to the day or the last day of the month.
-    // A simple approach is acceptable here, or we can check if the day changed.
-    // Let's stick to simple Date addition which is standard behavior for now.
     
     const updatedSub = {
-      ...sub,
+      ...rem,
       'Next Payment': nextDate.toISOString().split('T')[0]
     };
 
-    await saveSubscription(updatedSub, userId);
+    await saveReminder(updatedSub);
     res.json(updatedSub);
 
   } catch (error) {
@@ -206,9 +167,7 @@ app.post('/api/subscriptions/:id/pay', authenticateToken, async (req, res) => {
 });
 
 // Settings Endpoints
-// Note: For now, settings are still global/file-based. 
-// Ideally, these should be per-user too. 
-app.post('/api/settings', authenticateToken, async (req, res) => {
+app.post('/api/settings', async (req, res) => {
   try {
     let oldSettings = {};
     try {
@@ -230,7 +189,7 @@ app.post('/api/settings', authenticateToken, async (req, res) => {
   }
 });
 
-app.get('/api/settings', authenticateToken, async (req, res) => {
+app.get('/api/settings', async (req, res) => {
   try {
     const settingsPath = path.join(__dirname, '../data/settings.json');
     const data = await fs.readFile(settingsPath, 'utf-8');
@@ -246,18 +205,18 @@ app.get('/api/settings', authenticateToken, async (req, res) => {
 });
 
 // AI Analysis Endpoint
-app.post('/api/ai/analyze', authenticateToken, async (req, res) => {
+app.post('/api/ai/analyze', async (req, res) => {
   const { apiKey } = req.body;
   if (!apiKey) return res.status(400).json({ error: 'API Key is required' });
 
   try {
-    const subs = await getAllSubscriptions(req.user.id);
-    const activeSubs = subs.filter(s => s.Active === 'Yes');
+    const rems = await getAllReminders();
+    const activeSubs = rems.filter(s => s.Active === 'Yes');
     
     const groq = new Groq({ apiKey: apiKey });
     
     const prompt = `
-      Analyze my following subscription data and provide:
+      Analyze my following reminder data and provide:
       1. A summary of total monthly and yearly spending.
       2. 3 specific suggestions to save money (e.g., duplicate services, high-cost items).
       3. An assessment of whether the spending is balanced across categories.
@@ -277,6 +236,125 @@ app.post('/api/ai/analyze', authenticateToken, async (req, res) => {
     console.error('AI Error:', error);
     res.status(500).json({ error: 'AI Analysis failed: ' + error.message });
   }
+});
+
+// AI Create Reminder Endpoint
+app.post('/api/ai/create-reminder', async (req, res) => {
+  const { text, apiKey } = req.body;
+  if (!text) return res.status(400).json({ error: 'Reminder text is required' });
+  if (!apiKey) return res.status(400).json({ error: 'API Key is required' });
+
+  try {
+    const groq = new Groq({ apiKey: apiKey });
+    
+    const prompt = `
+      Parse the following natural language reminder text into a JSON object with the following structure:
+      {
+        "Name": "string",
+        "Next Payment": "YYYY-MM-DD",
+        "Payment Cycle": "Monthly" | "Quarterly" | "Yearly" | "One-time",
+        "Price": "string (e.g., '₹500', '$10.99')",
+        "Category": "string (e.g., 'Entertainment', 'Bills', 'Shopping')",
+        "Active": "Yes" | "No",
+        "URL": "string (optional URL for the reminder, if any)",
+        "ManualLogo": "string (optional URL for a custom logo, if any)"
+      }
+      
+      If a specific date is not provided, use today's date. If a year is not specified, assume the current year.
+      If it's a recurring reminder, determine the 'Payment Cycle'. If it's a one-time event, use "One-time".
+      If currency is not specified, default to '₹'.
+      Ensure "Active" is always "Yes" for new reminders.
+      
+      Natural language text: "${text}"
+      
+      Provide ONLY the JSON object in your response. Do not include any other text or markdown.
+    `;
+
+    const chatCompletion = await groq.chat.completions.create({
+      messages: [{ role: 'user', content: prompt }],
+      model: 'llama-3.3-70b-versatile',
+      response_format: { type: "json_object" }, // Request JSON object directly
+    });
+
+    const aiResponse = chatCompletion.choices[0]?.message?.content;
+    if (!aiResponse) {
+        throw new Error("AI did not return a valid response.");
+    }
+    
+    const parsedReminder = JSON.parse(aiResponse);
+
+    // Basic validation and default values for parsedReminder
+    if (!parsedReminder.Name || !parsedReminder["Next Payment"] || !parsedReminder.Price) {
+        throw new Error("AI failed to parse essential reminder details (Name, Next Payment, Price).");
+    }
+
+    // Ensure 'Next Payment' is a valid date
+    const date = new Date(parsedReminder["Next Payment"]);
+    if (isNaN(date.getTime())) {
+        // If AI gives an invalid date, try to default to today
+        parsedReminder["Next Payment"] = new Date().toISOString().split('T')[0];
+    } else {
+        parsedReminder["Next Payment"] = date.toISOString().split('T')[0];
+    }
+
+    parsedReminder.Active = "Yes"; // Always active for new reminders via AI
+
+    const savedReminder = await saveReminder(parsedReminder);
+    res.json(savedReminder);
+
+  } catch (error) {
+    console.error('AI Create Reminder Error:', error);
+    res.status(500).json({ error: 'AI Reminder creation failed: ' + error.message });
+  }
+});
+
+// Tamil Date Conversion Endpoint
+app.post('/api/convert-tamil-date', (req, res) => {
+  const { tamilMonthIndex, tamilDay } = req.body;
+
+  if (typeof tamilMonthIndex === 'undefined' || typeof tamilDay === 'undefined') {
+    return res.status(400).json({ error: 'tamilMonthIndex and tamilDay are required' });
+  }
+
+  // Simplified mapping for Tamil months to Gregorian. 
+  // This is an approximation and does not account for leap years or precise astronomical calculations.
+  // Tamil months typically start mid-Gregorian month.
+  const TAMIL_MONTHS_GREGORIAN_START = [
+    { name: 'Chithirai', gregorianMonth: 3, gregorianDay: 14, days: 31 }, // April 14
+    { name: 'Vaikasi', gregorianMonth: 4, gregorianDay: 14, days: 31 }, // May 14
+    { name: 'Aani', gregorianMonth: 5, gregorianDay: 15, days: 32 }, // June 15
+    { name: 'Aadi', gregorianMonth: 6, gregorianDay: 16, days: 31 }, // July 16
+    { name: 'Avani', gregorianMonth: 7, gregorianDay: 17, days: 31 }, // Aug 17
+    { name: 'Purattasi', gregorianMonth: 8, gregorianDay: 17, days: 31 }, // Sep 17
+    { name: 'Aippasi', gregorianMonth: 9, gregorianDay: 17, days: 30 }, // Oct 17
+    { name: 'Karthigai', gregorianMonth: 10, gregorianDay: 16, days: 29 }, // Nov 16
+    { name: 'Margazhi', gregorianMonth: 11, gregorianDay: 16, days: 29 }, // Dec 16
+    { name: 'Thai', gregorianMonth: 0, gregorianDay: 14, days: 30 }, // Jan 14 (Next Gregorian Year)
+    { name: 'Maasi', gregorianMonth: 1, gregorianDay: 13, days: 30 }, // Feb 13
+    { name: 'Panguni', gregorianMonth: 2, gregorianDay: 14, days: 30 }  // Mar 14
+  ];
+
+  if (tamilMonthIndex < 0 || tamilMonthIndex >= TAMIL_MONTHS_GREGORIAN_START.length) {
+    return res.status(400).json({ error: 'Invalid tamilMonthIndex' });
+  }
+
+  const currentYear = new Date().getFullYear();
+  const tamilMonthData = TAMIL_MONTHS_GREGORIAN_START[tamilMonthIndex];
+
+  let gregorianDate = new Date(currentYear, tamilMonthData.gregorianMonth, tamilMonthData.gregorianDay + tamilDay - 1);
+
+  // Handle year rollover for 'Thai' and 'Maasi' if current date is before Tamil new year (Chithirai)
+  if (tamilMonthData.gregorianMonth < 3 && new Date().getMonth() > 3) { // If Tamil month is Jan-Mar and current month is after April
+      gregorianDate.setFullYear(currentYear + 1);
+  }
+
+  if (gregorianDate.getDate() !== (tamilMonthData.gregorianDay + tamilDay - 1)) {
+    // This is a very basic check for overflow if tamilDay is too large for the month.
+    // A more robust solution would be needed for precise calendar conversions.
+    console.warn(`Tamil day ${tamilDay} might be out of range for ${tamilMonthData.name} in Gregorian conversion.`);
+  }
+
+  res.json({ gregorianDate: gregorianDate.toISOString().split('T')[0] });
 });
 
 // SPA Fallback (Must be last)
@@ -302,7 +380,7 @@ async function sendGotifyNotification(config, title, message) {
   }
 }
 
-async function sendEmailNotification(config, subject, text, to) {
+async function sendEmailNotification(config, remject, text, to) {
   if (!config.smtpHost || !config.smtpUser) return;
   try {
     const transporter = nodemailer.createTransport({
@@ -318,7 +396,7 @@ async function sendEmailNotification(config, subject, text, to) {
     await transporter.sendMail({
       from: config.smtpFrom || config.smtpUser,
       to: to || config.smtpUser, // Default to self if 'to' not provided
-      subject: subject,
+      remject: remject,
       text: text,
     });
     console.log('Email sent.');
@@ -332,24 +410,24 @@ async function sendEmailNotification(config, subject, text, to) {
 async function runDailyReminderCheck() {
   console.log('[Reminder] Running daily reminder check at:', new Date().toLocaleString());
   try {
-    const subs = await getAllSubscriptions();
+    const rems = await getAllReminders();
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    const dueSoon = subs.filter(sub => {
-      if (!sub['Next Payment'] || sub.Active !== 'Yes') return false;
-      const dueDate = new Date(sub['Next Payment']);
+    const dueSoon = rems.filter(rem => {
+      if (!rem['Next Payment'] || rem.Active !== 'Yes') return false;
+      const dueDate = new Date(rem['Next Payment']);
       dueDate.setHours(0, 0, 0, 0);
       
       const diffTime = dueDate.getTime() - today.getTime();
       const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
       
-      console.log(`[Reminder] Checking ${sub.Name}: Due ${sub['Next Payment']}, Diff Days: ${diffDays}`);
+      console.log(`[Reminder] Checking ${rem.Name}: Due ${rem['Next Payment']}, Diff Days: ${diffDays}`);
       return diffDays >= 0 && diffDays <= 3; 
     });
 
     if (dueSoon.length > 0) {
-      console.log(`[Reminder] Found ${dueSoon.length} subscriptions due soon.`);
+      console.log(`[Reminder] Found ${dueSoon.length} reminders due soon.`);
       
       let config = {};
       try {
@@ -361,7 +439,7 @@ async function runDailyReminderCheck() {
         return { success: false, message: 'No settings found' }; 
       }
 
-      let message = `You have ${dueSoon.length} subscriptions due soon:\n` + 
+      let message = `You have ${dueSoon.length} reminders due soon:\n` + 
                       dueSoon.map(s => `- ${s.Name} (${s.Price}) due on ${s['Next Payment']}`).join('\n');
 
       // AI Summary Integration
@@ -370,10 +448,10 @@ async function runDailyReminderCheck() {
           console.log('[Reminder] Requesting Groq AI summary...');
           const groq = new Groq({ apiKey: config.groqApiKey });
           const aiPrompt = `
-            I have the following subscriptions due soon. Please write a very concise, friendly, and professional reminder message for an email and push notification.
+            I have the following reminders due soon. Please write a very concise, friendly, and professional reminder message for an email and push notification.
             List the items clearly with their prices and due dates.
             
-            Subscriptions:
+            Reminders:
             ${dueSoon.map(s => `- ${s.Name}: ${s.Price}, due on ${s['Next Payment']}`).join('\n')}
           `;
 
@@ -408,8 +486,8 @@ async function runDailyReminderCheck() {
         return { success: false, message: 'Notifications are disabled in settings.' };
       }
     } else {
-      console.log('[Reminder] No subscriptions due in the next 3 days.');
-      return { success: true, message: 'No subscriptions due in the next 3 days.' };
+      console.log('[Reminder] No reminders due in the next 3 days.');
+      return { success: true, message: 'No reminders due in the next 3 days.' };
     }
   } catch (err) {
     console.error('[Reminder] Error:', err);
@@ -429,11 +507,11 @@ app.post('/api/test/reminders', async (req, res) => {
 
 app.post('/api/test/gotify', async (req, res) => {
   try {
-    const subs = await getAllSubscriptions();
-    const activeSubs = subs.filter(s => s.Active === 'Yes');
-    const message = `Test Notification\n\nYou have ${activeSubs.length} active subscriptions.\nTotal Monthly: ₹${activeSubs.reduce((sum, s) => sum + convertToINR(s.Price), 0).toFixed(2)}`;
+    const rems = await getAllReminders();
+    const activeSubs = rems.filter(s => s.Active === 'Yes');
+    const message = `Test Notification\n\nYou have ${activeSubs.length} active reminders.\nTotal Monthly: ₹${activeSubs.reduce((sum, s) => sum + convertToINR(s.Price), 0).toFixed(2)}`;
     
-    await sendGotifyNotification(req.body, 'Subscriptions App Test', message);
+    await sendGotifyNotification(req.body, 'Reminders App Test', message);
     res.json({ success: true });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -442,12 +520,12 @@ app.post('/api/test/gotify', async (req, res) => {
 
 app.post('/api/test/email', async (req, res) => {
   try {
-    const subs = await getAllSubscriptions();
-    const activeSubs = subs.filter(s => s.Active === 'Yes');
-    const message = `This is a test email from your Subscriptions App.\n\nYour active subscriptions:\n` + 
+    const rems = await getAllReminders();
+    const activeSubs = rems.filter(s => s.Active === 'Yes');
+    const message = `This is a test email from your Reminders App.\n\nYour active reminders:\n` + 
                     activeSubs.map(s => `- ${s.Name}: ${s.Price}`).join('\n');
     
-    await sendEmailNotification(req.body, 'Subscriptions App Test', message, req.body.testRecipient);
+    await sendEmailNotification(req.body, 'Reminders App Test', message, req.body.testRecipient);
     res.json({ success: true });
   } catch (error) {
     res.status(500).json({ error: error.message });

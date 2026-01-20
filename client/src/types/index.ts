@@ -1,4 +1,4 @@
-export interface Subscription {
+export interface Reminder {
   id: string;
   Name: string;
   Price: string;
@@ -32,13 +32,13 @@ export interface Settings {
 }
 
 export interface DashboardData {
-  subscriptions: Subscription[];
+  reminders: Reminder[];
   stats: {
     totalMonthlyINR: number;
     totalYearlyINR: number;
     averageMonthlyINR: number;
     dueThisMonthINR: number;
-    mostExpensive: Subscription | null;
+    mostExpensive: Reminder | null;
     categoryStats: Record<string, number>;
   };
 }

@@ -4,11 +4,11 @@ import { Container, Card, Row, Col, ListGroup, Spinner } from 'react-bootstrap';
 import Calendar from 'react-calendar';
 import 'react-calendar/dist/Calendar.css';
 import { format, parseISO, isSameDay } from 'date-fns';
-import type { Subscription } from '../types';
+import type { Reminder } from '../types';
 import { Logo } from '../components/Logo';
 
 export default function CalendarView() {
-  const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
+  const [reminders, setReminders] = useState<Reminder[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
 
@@ -18,8 +18,8 @@ export default function CalendarView() {
 
   const fetchData = async () => {
     try {
-      const res = await axios.get('/api/subscriptions');
-      setSubscriptions(res.data.subscriptions);
+      const res = await axios.get('/api/reminders');
+      setReminders(res.data.reminders);
     } catch (err) {
       console.error(err);
     } finally {
@@ -31,9 +31,9 @@ export default function CalendarView() {
 
       if (view === 'month') {
 
-        const daySubs = subscriptions.filter(sub => 
+        const daySubs = reminders.filter(rem => 
 
-          sub['Next Payment'] && isSameDay(parseISO(sub['Next Payment']), date)
+          rem['Next Payment'] && isSameDay(parseISO(rem['Next Payment']), date)
 
         );
 
@@ -43,13 +43,13 @@ export default function CalendarView() {
 
             <div className="calendar-tile-content">
 
-              {daySubs.map(sub => (
+              {daySubs.map(rem => (
 
-                <div key={sub.id} className="tile-subscription-item">
+                <div key={rem.id} className="tile-reminder-item">
 
-                  <span className="tile-sub-name text-truncate">{sub.Name}</span>
+                  <span className="tile-rem-name text-truncate">{rem.Name}</span>
 
-                  <span className="tile-sub-price small">{sub.Price.split(' ')[0]}</span>
+                  <span className="tile-rem-price small">{rem.Price.split(' ')[0]}</span>
 
                 </div>
 
@@ -69,9 +69,9 @@ export default function CalendarView() {
 
   
 
-    const selectedDaySubs = subscriptions.filter(sub => 
+    const selectedDaySubs = reminders.filter(rem => 
 
-      sub['Next Payment'] && isSameDay(parseISO(sub['Next Payment']), selectedDate)
+      rem['Next Payment'] && isSameDay(parseISO(rem['Next Payment']), selectedDate)
 
     );
 
@@ -102,14 +102,14 @@ export default function CalendarView() {
               </Card.Header>
               <ListGroup variant="flush">
                 {selectedDaySubs.length > 0 ? (
-                  selectedDaySubs.map(sub => (
-                    <ListGroup.Item key={sub.id} className="py-3 bg-transparent border-0 border-bottom">
+                  selectedDaySubs.map(rem => (
+                    <ListGroup.Item key={rem.id} className="py-3 bg-transparent border-0 border-bottom">
                       <div className="d-flex justify-content-between align-items-center mb-1">
                         <div className="d-flex align-items-center">
-                          <Logo name={sub.Name} url={sub.URL} manualLogo={sub.ManualLogo} />
-                          <span className="fw-medium text-truncate" style={{ maxWidth: '120px' }}>{sub.Name}</span>
+                          <Logo name={rem.Name} url={rem.URL} manualLogo={rem.ManualLogo} />
+                          <span className="fw-medium text-truncate" style={{ maxWidth: '120px' }}>{rem.Name}</span>
                         </div>
-                        <span className="fw-bold small">{sub.Price}</span>
+                        <span className="fw-bold small">{rem.Price}</span>
                       </div>
                     </ListGroup.Item>
                   ))
@@ -140,19 +140,19 @@ export default function CalendarView() {
             border: 1px solid var(--bs-border-color-translucent) !important;
           }
           .react-calendar__tile--active {
-            background: var(--bs-primary-bg-subtle) !important;
+            background: var(--bs-primary-bg-remtle) !important;
             color: var(--bs-primary-text-emphasis) !important;
             font-weight: bold;
           }
           .react-calendar__tile--now {
-            background: var(--bs-warning-bg-subtle) !important;
+            background: var(--bs-warning-bg-remtle) !important;
           }
           .calendar-tile-content {
             width: 100%;
             overflow: hidden;
             margin-top: 4px;
           }
-          .tile-subscription-item {
+          .tile-reminder-item {
             background: var(--bs-primary);
             color: white;
             font-size: 10px;
@@ -166,11 +166,11 @@ export default function CalendarView() {
             overflow: hidden;
             box-shadow: 0 1px 2px rgba(0,0,0,0.1);
           }
-          .tile-sub-name {
+          .tile-rem-name {
             flex: 1;
             margin-right: 4px;
           }
-          .tile-sub-price {
+          .tile-rem-price {
             font-weight: bold;
             opacity: 0.9;
           }

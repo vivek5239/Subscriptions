@@ -1,9 +1,9 @@
 version: '3.8'
 
 services:
-  subscriptions:
-    image: vivek5239/subscriptions-app:latest
-    container_name: subscriptions
+  reminders:
+    image: vivek5239/reminders-app:latest
+    container_name: reminders
     restart: unless-stopped
     networks:
       - t3_proxy
@@ -11,7 +11,7 @@ services:
     ports:
       - "3000:5000"
     volumes:
-      - $DOCKERDIR/appdata/subscriptions:/data
+      - $DOCKERDIR/appdata/reminders:/data
     environment:
       - PORT=5000
       - TZ=$TZ

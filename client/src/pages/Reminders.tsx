@@ -2,15 +2,15 @@ import { useEffect, useState } from 'react';
 import axios from 'axios';
 import { Card, Table, Container, Badge, Spinner, Button, Stack, Row, Col } from 'react-bootstrap';
 import { Plus, Edit2, Trash2, LayoutGrid, List } from 'lucide-react';
-import type { Subscription } from '../types';
+import type { Reminder } from '../types';
 import { Logo } from '../components/Logo';
-import SubscriptionModal from '../components/SubscriptionModal';
+import ReminderModal from '../components/ReminderModal';
 
-export default function Subscriptions() {
-  const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
+export default function Reminders() {
+  const [reminders, setReminders] = useState<Reminder[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
-  const [selectedSub, setSelectedSub] = useState<Subscription | null>(null);
+  const [selectedSub, setSelectedSub] = useState<Reminder | null>(null);
   const [viewMode, setViewMode] = useState<'table' | 'grid'>('table');
 
   useEffect(() => {
@@ -19,8 +19,8 @@ export default function Subscriptions() {
 
   const fetchData = async () => {
     try {
-      const res = await axios.get('/api/subscriptions');
-      setSubscriptions(res.data.subscriptions);
+      const res = await axios.get('/api/reminders');
+      setReminders(res.data.reminders);
     } catch (err) {
       console.error(err);
     } finally {
@@ -28,22 +28,22 @@ export default function Subscriptions() {
     }
   };
 
-  const handleSave = async (subData: Partial<Subscription>) => {
+  const handleSave = async (remData: Partial<Reminder>) => {
     try {
-      await axios.post('/api/subscriptions', subData);
+      await axios.post('/api/reminders', remData);
       fetchData();
     } catch (err) {
-      console.error('Error saving subscription:', err);
+      console.error('Error saving reminder:', err);
     }
   };
 
   const handleDelete = async (id: string) => {
-    if (!window.confirm('Are you sure you want to delete this subscription?')) return;
+    if (!window.confirm('Are you sure you want to delete this reminder?')) return;
     try {
-      await axios.delete(`/api/subscriptions/${id}`);
+      await axios.delete(`/api/reminders/${id}`);
       fetchData();
     } catch (err) {
-      console.error('Error deleting subscription:', err);
+      console.error('Error deleting reminder:', err);
     }
   };
 
@@ -52,8 +52,8 @@ export default function Subscriptions() {
     setShowModal(true);
   };
 
-  const openEditModal = (sub: Subscription) => {
-    setSelectedSub(sub);
+  const openEditModal = (rem: Reminder) => {
+    setSelectedSub(rem);
     setShowModal(true);
   };
 
@@ -62,7 +62,7 @@ export default function Subscriptions() {
   return (
     <Container className="py-4">
       <Stack direction="horizontal" gap={3} className="mb-4">
-        <h4 className="mb-0 fw-bold">Subscriptions</h4>
+        <h4 className="mb-0 fw-bold">Reminders</h4>
         <div className="ms-auto d-flex gap-2">
           <div className="btn-group shadow-sm rounded-pill overflow-hidden">
             <Button 
@@ -83,7 +83,7 @@ export default function Subscriptions() {
             </Button>
           </div>
           <Button variant="primary" className="d-flex align-items-center gap-2 rounded-pill shadow-sm" onClick={openAddModal}>
-            <Plus size={18} /> <span className="d-none d-sm-inline">Add Subscription</span>
+            <Plus size={18} /> <span className="d-none d-sm-inline">Add Reminder</span>
           </Button>
         </div>
       </Stack>
@@ -103,38 +103,38 @@ export default function Subscriptions() {
               </tr>
             </thead>
             <tbody>
-              {subscriptions.map((sub) => (
-                <tr key={sub.id} className="bg-transparent">
+              {reminders.map((rem) => (
+                <tr key={rem.id} className="bg-transparent">
                   <td className="ps-4">
                     <div className="d-flex align-items-center">
-                      <Logo name={sub.Name} url={sub.URL} manualLogo={sub.ManualLogo} />
-                      <span className="fw-medium">{sub.Name}</span>
+                      <Logo name={rem.Name} url={rem.URL} manualLogo={rem.ManualLogo} />
+                      <span className="fw-medium">{rem.Name}</span>
                     </div>
                   </td>
-                                  <td className="fw-medium">{sub.Price}</td>
+                                  <td className="fw-medium">{rem.Price}</td>
                                   <td>
-                                    <Badge className="bg-primary-subtle text-primary-emphasis border border-primary-subtle rounded-pill fw-medium px-3">
-                                      {sub['Payment Cycle']}
+                                    <Badge className="bg-primary-remtle text-primary-emphasis border border-primary-remtle rounded-pill fw-medium px-3">
+                                      {rem['Payment Cycle']}
                                     </Badge>
                                   </td>
-                                  <td className="small text-muted">{sub['Next Payment']}</td>
+                                  <td className="small text-muted">{rem['Next Payment']}</td>
                                   <td>
-                                    <Badge className="bg-info-subtle text-info-emphasis border border-info-subtle rounded-pill fw-medium px-3">
-                                        {sub.Category}
+                                    <Badge className="bg-info-remtle text-info-emphasis border border-info-remtle rounded-pill fw-medium px-3">
+                                        {rem.Category}
                                     </Badge>
                                   </td>
                                   <td>
                   
-                    <Badge bg={sub.Active === 'Yes' ? 'success' : 'secondary'} className="rounded-pill">
-                      {sub.Active === 'Yes' ? 'Active' : 'Inactive'}
+                    <Badge bg={rem.Active === 'Yes' ? 'success' : 'secondary'} className="rounded-pill">
+                      {rem.Active === 'Yes' ? 'Active' : 'Inactive'}
                     </Badge>
                   </td>
                   <td className="text-end pe-4">
                     <Stack direction="horizontal" gap={2} className="justify-content-end">
-                      <Button variant="link" className="text-muted p-0 hover-opacity-75" onClick={() => openEditModal(sub)}>
+                      <Button variant="link" className="text-muted p-0 hover-opacity-75" onClick={() => openEditModal(rem)}>
                         <Edit2 size={16} />
                       </Button>
-                      <Button variant="link" className="text-danger p-0 hover-opacity-75" onClick={() => handleDelete(sub.id)}>
+                      <Button variant="link" className="text-danger p-0 hover-opacity-75" onClick={() => handleDelete(rem.id)}>
                         <Trash2 size={16} />
                       </Button>
                     </Stack>
@@ -146,33 +146,33 @@ export default function Subscriptions() {
         </Card>
       ) : (
         <Row className="g-4">
-          {subscriptions.map((sub) => (
-            <Col key={sub.id} xs={12} sm={6} md={4} lg={3}>
+          {reminders.map((rem) => (
+            <Col key={rem.id} xs={12} sm={6} md={4} lg={3}>
               <Card className="shadow-sm h-100 border-0 hover-shadow transition-all">
                 <Card.Body className="p-4 text-center d-flex flex-column align-items-center">
                   <div className="mb-3">
-                    <Logo name={sub.Name} url={sub.URL} manualLogo={sub.ManualLogo} size={64} />
+                    <Logo name={rem.Name} url={rem.URL} manualLogo={rem.ManualLogo} size={64} />
                   </div>
-                  <h5 className="fw-bold mb-1 text-truncate w-100">{sub.Name}</h5>
-                  <div className="text-primary fw-bold fs-4 mb-2">{sub.Price}</div>
+                  <h5 className="fw-bold mb-1 text-truncate w-100">{rem.Name}</h5>
+                  <div className="text-primary fw-bold fs-4 mb-2">{rem.Price}</div>
                   <div className="mb-3 d-flex gap-1 justify-content-center">
-                    <Badge className="bg-info-subtle text-info-emphasis border border-info-subtle rounded-pill fw-medium px-2">
-                        {sub.Category}
+                    <Badge className="bg-info-remtle text-info-emphasis border border-info-remtle rounded-pill fw-medium px-2">
+                        {rem.Category}
                     </Badge>
-                    <Badge bg={sub.Active === 'Yes' ? 'success' : 'secondary'} className="rounded-pill">
-                      {sub.Active === 'Yes' ? 'Active' : 'Inactive'}
+                    <Badge bg={rem.Active === 'Yes' ? 'success' : 'secondary'} className="rounded-pill">
+                      {rem.Active === 'Yes' ? 'Active' : 'Inactive'}
                     </Badge>
                   </div>
                   <div className="mt-auto pt-3 border-top w-100 d-flex justify-content-between align-items-center">
                     <div className="text-start">
                       <div className="text-muted small text-uppercase">Next Due</div>
-                      <div className="small fw-medium">{sub['Next Payment'] || 'N/A'}</div>
+                      <div className="small fw-medium">{rem['Next Payment'] || 'N/A'}</div>
                     </div>
                     <Stack direction="horizontal" gap={2}>
-                      <Button variant="outline-secondary" size="sm" className="rounded-circle p-2" onClick={() => openEditModal(sub)}>
+                      <Button variant="outline-secondary" size="sm" className="rounded-circle p-2" onClick={() => openEditModal(rem)}>
                         <Edit2 size={14} />
                       </Button>
-                      <Button variant="outline-danger" size="sm" className="rounded-circle p-2" onClick={() => handleDelete(sub.id)}>
+                      <Button variant="outline-danger" size="sm" className="rounded-circle p-2" onClick={() => handleDelete(rem.id)}>
                         <Trash2 size={14} />
                       </Button>
                     </Stack>
@@ -184,11 +184,11 @@ export default function Subscriptions() {
         </Row>
       )}
 
-      <SubscriptionModal 
+      <ReminderModal 
         show={showModal} 
         onHide={() => setShowModal(false)} 
         onSave={handleSave} 
-        subscription={selectedSub}
+        reminder={selectedSub}
       />
 
       <style>{`

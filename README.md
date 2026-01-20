@@ -1,12 +1,12 @@
-# Subscriptions
+# Reminders
 
-A modern subscription management dashboard to track your recurring expenses, analyze costs, and never miss a payment.
+A modern reminder management dashboard to track your recurring expenses, analyze costs, and never miss a payment.
 
 ## Features
 
-- **Dashboard**: Visual overview of Monthly/Yearly costs, Active Subscriptions, and Approaching Deadlines.
+- **Dashboard**: Visual overview of Monthly/Yearly costs, Active Reminders, and Approaching Deadlines.
 - **Currency Normalization**: Automatically converts various currencies (USD, EUR, GBP) to INR for unified statistics.
-- **Smart Logos**: Automatically fetches logos for your subscriptions.
+- **Smart Logos**: Automatically fetches logos for your reminders.
 - **Upcoming Payments**: Highlights payments due in the next 5 days.
 - **Docker Ready**: Easy deployment with Docker and Docker Compose.
 
@@ -20,7 +20,7 @@ A modern subscription management dashboard to track your recurring expenses, ana
 ### Local Development
 
 1.  **Setup Data**
-    Ensure your `subscriptions.json` is in the `data/` directory.
+    Ensure your `reminders.json` is in the `data/` directory.
 
 2.  **Start Server**
     ```bash
@@ -54,15 +54,15 @@ To push this image to Docker Hub (e.g., for your server):
 
 ```bash
 # Build the image
-docker build -t your-username/subscriptions:latest .
+docker build -t your-username/reminders:latest .
 
 # Push to Docker Hub
-docker push your-username/subscriptions:latest
+docker push your-username/reminders:latest
 ```
 
 ## Configuration
 
-- **Data Source**: The app reads from `data/subscriptions.json`. This file is persisted via a Docker volume.
+- **Data Source**: The app reads from `data/reminders.json`. This file is persisted via a Docker volume.
 - **Currency**: Default base currency is INR. Rates are currently fixed in `server/currency.js`.
 
 ## Tech Stack

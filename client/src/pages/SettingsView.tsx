@@ -51,7 +51,7 @@ export default function SettingsView() {
   const handleSave = async () => {
     try {
       await axios.post('/api/settings', config);
-      localStorage.setItem('sub_app_config', JSON.stringify(config));
+      localStorage.setItem('rem_app_config', JSON.stringify(config));
       alert('Settings saved successfully!');
     } catch (err) {
       alert('Error saving settings');
@@ -118,7 +118,7 @@ export default function SettingsView() {
               </div>
               <div>
                 <h6 className="mb-0 fw-bold">Daily Reminders</h6>
-                <small className="text-muted">Send notifications for subscriptions due in the next 3 days.</small>
+                <small className="text-muted">Send notifications for reminders due in the next 3 days.</small>
               </div>
             </div>
             <Form.Check 
@@ -184,7 +184,7 @@ export default function SettingsView() {
                 className="bg-body border-secondary border-opacity-25"
               />
               <Form.Text className="text-muted">
-                Used for generating subscription insights and cost-cutting tips with <strong>llama-3.3-70b-versatile</strong>.
+                Used for generating reminder insights and cost-cutting tips with <strong>llama-3.3-70b-versatile</strong>.
               </Form.Text>
             </Form.Group>
           </Card.Body>
@@ -418,7 +418,7 @@ export default function SettingsView() {
         </Card>
 
         <div className="d-flex justify-content-end">
-          <Button variant="primary" type="submit" className="d-flex align-items-center gap-2 px-4 rounded-pill shadow-sm">
+          <Button variant="primary" type="remmit" className="d-flex align-items-center gap-2 px-4 rounded-pill shadow-sm">
             <Save size={18} /> Save Settings
           </Button>
         </div>
