@@ -27,6 +27,8 @@ export interface Settings {
   testRecipient?: string;
   mainCurrency: string;
   notificationsEnabled?: boolean;
+  dailyCheckTime?: string;
+  lastDailyCheck?: string | null;
 }
 
 export interface DashboardData {

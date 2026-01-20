@@ -17,7 +17,9 @@ export default function SettingsView() {
     smtpFrom: '',
     testRecipient: '',
     mainCurrency: 'INR',
-    notificationsEnabled: true
+    notificationsEnabled: true,
+    dailyCheckTime: '09:00',
+    lastDailyCheck: null,
   });
   const [testing, setTesting] = useState<string | null>(null);
   const { color, setColor, mode, toggleMode } = useTheme();
@@ -126,6 +128,42 @@ export default function SettingsView() {
               onChange={(e) => setConfig({...config, notificationsEnabled: e.target.checked})}
               className="fs-4"
             />
+          </Card.Body>
+        </Card>
+
+        {/* Scheduler Settings */}
+        <Card className="shadow-sm mb-4">
+          <Card.Header className="bg-transparent py-3 border-bottom-0 d-flex align-items-center gap-2">
+            <Bot className="text-primary" size={20} />
+            <h6 className="mb-0 fw-bold">Scheduler</h6>
+          </Card.Header>
+          <Card.Body>
+            <Row>
+              <Col md={6}>
+                <Form.Group className="mb-3">
+                  <Form.Label>Daily Check Time</Form.Label>
+                  <Form.Control 
+                    type="time" 
+                    value={config.dailyCheckTime}
+                    onChange={(e) => setConfig({...config, dailyCheckTime: e.target.value})}
+                    className="bg-body border-secondary border-opacity-25"
+                  />
+                  <Form.Text className="text-muted">
+                    The time of day to run the daily reminder check.
+                  </Form.Text>
+                </Form.Group>
+              </Col>
+              <Col md={6}>
+                <Form.Group className="mb-3">
+                  <Form.Label>Last Run</Form.Label>
+                  <p className="form-control-plaintext">
+                    {config.lastDailyCheck 
+                      ? new Date(config.lastDailyCheck).toLocaleString() 
+                      : 'Never'}
+                  </p>
+                </Form.Group>
+              </Col>
+            </Row>
           </Card.Body>
         </Card>
 

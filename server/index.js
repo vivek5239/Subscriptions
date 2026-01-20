@@ -210,8 +210,20 @@ app.post('/api/subscriptions/:id/pay', authenticateToken, async (req, res) => {
 // Ideally, these should be per-user too. 
 app.post('/api/settings', authenticateToken, async (req, res) => {
   try {
-    const settingsPath = path.join(__dirname, '../data/settings.json');
-    await fs.writeFile(settingsPath, JSON.stringify(req.body, null, 2));
+    let oldSettings = {};
+    try {
+      const data = await fs.readFile(settingsPath, 'utf-8');
+      oldSettings = JSON.parse(data);
+    } catch (e) {
+      // Ignore if file doesn't exist
+    }
+
+    const newSettings = { ...oldSettings, ...req.body };
+    await fs.writeFile(settingsPath, JSON.stringify(newSettings, null, 2));
+    
+    // Reschedule the job if the time has changed
+    scheduleDailyReminder();
+
     res.json({ success: true });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -222,9 +234,14 @@ app.get('/api/settings', authenticateToken, async (req, res) => {
   try {
     const settingsPath = path.join(__dirname, '../data/settings.json');
     const data = await fs.readFile(settingsPath, 'utf-8');
-    res.json(JSON.parse(data));
+    const settings = JSON.parse(data);
+    res.json({
+      ...settings,
+      dailyCheckTime: settings.dailyCheckTime || '09:00',
+      lastDailyCheck: settings.lastDailyCheck || null,
+    });
   } catch (error) {
-    res.json({});
+    res.json({ dailyCheckTime: '09:00', lastDailyCheck: null });
   }
 });
 
@@ -437,15 +454,39 @@ app.post('/api/test/email', async (req, res) => {
   }
 });
 
-// Daily Reminder Cron Job (Runs at 9:00 AM)
-cron.schedule('0 9 * * *', async () => {
-  try {
-    await runDailyReminderCheck();
-  } catch (err) {
-    console.error('[Cron] Reminder Job Failed:', err);
-  }
-});
+const settingsPath = path.join(__dirname, '../data/settings.json');
 
+// ... (keep existing code) ...
+
+let dailyReminderJob;
+
+function scheduleDailyReminder() {
+  if (dailyReminderJob) {
+    dailyReminderJob.stop();
+  }
+
+  fs.readFile(settingsPath, 'utf-8')
+    .then(data => JSON.parse(data))
+    .catch(() => ({})) // Ignore errors if file doesn't exist, use empty object
+    .then(settings => {
+      const time = settings.dailyCheckTime || '09:00';
+      const [hour, minute] = time.split(':');
+      const cronExpression = `${minute} ${hour} * * *`;
+
+      dailyReminderJob = cron.schedule(cronExpression, async () => {
+        try {
+          await runDailyReminderCheck();
+          // Update last run time
+          const currentSettings = JSON.parse(await fs.readFile(settingsPath, 'utf-8'));
+          currentSettings.lastDailyCheck = new Date().toISOString();
+          await fs.writeFile(settingsPath, JSON.stringify(currentSettings, null, 2));
+        } catch (err) {
+          console.error('[Cron] Reminder Job Failed:', err);
+        }
+      });
+      console.log(`[Cron] Daily reminder job scheduled for ${time}`);
+    });
+}
 
 // Update exchange rates daily at midnight
 cron.schedule('0 0 * * *', async () => {
@@ -457,4 +498,6 @@ app.listen(PORT, async () => {
   console.log(`Server running on http://localhost:${PORT}`);
   // Initial rates update
   await updateRates();
+  // Schedule the daily reminder job
+  scheduleDailyReminder();
 });
