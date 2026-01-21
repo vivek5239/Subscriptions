@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Container, Card, Form, Button, Row, Col, Stack, Alert } from 'react-bootstrap';
 import { Save, Bot, Bell, Palette, Check, Moon, Calendar } from 'lucide-react';
 import axios from 'axios';
-import type { Settings } from '../types';
+import type { Settings, Reminder } from '../types';
 import { useTheme, type ThemeColor } from '../context/ThemeContext';
 
 export default function SettingsView() {
@@ -22,9 +22,6 @@ export default function SettingsView() {
   });
   const [testing, setTesting] = useState<string | null>(null);
   const { color, setColor, mode, toggleMode } = useTheme();
-  const [icsFile, setIcsFile] = useState<File | null>(null);
-  const [importStatus, setImportStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
-  const [importMessage, setImportMessage] = useState<string>('');
   const [icsFile, setIcsFile] = useState<File | null>(null);
   const [importStatus, setImportStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [importMessage, setImportMessage] = useState<string>('');
