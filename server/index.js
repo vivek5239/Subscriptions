@@ -12,12 +12,20 @@ import { getAllReminders, saveReminder, deleteReminder } from './db.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+const DATA_PATH = path.join(__dirname, '../data/reminders.json');
+const settingsPath = path.join(__dirname, '../data/settings.json');
+
 const app = express();
 const PORT = process.env.PORT || 5000;
 
 app.use(cors());
 app.use(express.json());
-app.use(express.static(path.join(__dirname, '..', 'client', 'dist')));
+
+if (process.env.NODE_ENV === 'production') {
+  app.use(express.static(path.join(__dirname, 'public')));
+} else {
+  app.use(express.static(path.join(__dirname, '..', 'client', 'dist')));
+}
 
 // --- API Endpoints ---
 
@@ -456,8 +464,6 @@ app.post('/api/test/email', async (req, res) => {
   }
 });
 
-const DATA_PATH = path.join(__dirname, '../data/reminders.json');
-const settingsPath = path.join(__dirname, '../data/settings.json');
 
 // Function to ensure settings.json exists and is valid JSON
 async function ensureSettingsFile() {
