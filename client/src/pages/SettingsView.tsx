@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Container, Card, Form, Button, Row, Col } from 'react-bootstrap';
+import { Container, Card, Form, Button, Row, Col, Stack } from 'react-bootstrap';
 import { Save, Bot, Bell, Palette, Check, Moon, Calendar } from 'lucide-react';
 import axios from 'axios';
 import type { Settings } from '../types';
