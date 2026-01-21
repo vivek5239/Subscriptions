@@ -142,18 +142,21 @@ app.post('/api/ai/create-reminder', async (req, res) => {
         "Next Payment": "YYYY-MM-DD",
         "Category": "string",
         "Active": "Yes",
-        "Notes": "string (optional)"
+        "Notes": "string (optional)",
+        "tamilMonthIndex": "number (0-11, optional)",
+        "tamilDay": "number (1-32, optional)"
       }
 
-      - Today's date is ${new Date().toISOString().split('T')[0]}.
-      - If a year is not specified, assume the current year.
+      - If a specific date is not provided, use today's date. If a year is not specified, assume the current year.
+      - If a named event (e.g., "Diwali", "Christmas") is mentioned without a date, try to infer the next upcoming date for that event. If inference is not possible, ask a clarifying question.
       - "Active" should always be "Yes".
+      - If a Tamil month (e.g., Chithirai, Thai) and day are detected, provide 'tamilMonthIndex' and 'tamilDay' instead of 'Next Payment'. 'tamilMonthIndex' should be 0 for Chithirai, 1 for Vaikasi, ..., 11 for Panguni.
 
       Natural language text: "${text}"
 
       **Your Task:**
 
-      1.  **If you have all the necessary information** (at least a "Name" and a "Next Payment" date), respond with ONLY the final JSON object.
+      1.  **If you have all the necessary information** (at least a "Name" and either a "Next Payment" date or "tamilMonthIndex" and "tamilDay"), respond with ONLY the final JSON object.
       2.  **If information is missing or ambiguous** (e.g., "remind me to call John", but no date), you MUST ask a single, clear clarifying question. Your response in this case MUST be a JSON object with a "question" field, like this:
           { "question": "When would you like to be reminded to call John?" }
           
@@ -179,7 +182,23 @@ app.post('/api/ai/create-reminder', async (req, res) => {
     }
 
     // If not a question, it should be a reminder object
-    const parsedReminder = parsedResponse;
+    let parsedReminder = parsedResponse;
+
+    // Handle Tamil Date Conversion if provided by AI
+    if (typeof parsedReminder.tamilMonthIndex === 'number' && typeof parsedReminder.tamilDay === 'number') {
+      try {
+        const tamilDateRes = await axios.post('http://localhost:5000/api/convert-tamil-date', {
+          tamilMonthIndex: parsedReminder.tamilMonthIndex,
+          tamilDay: parsedReminder.tamilDay,
+        });
+        parsedReminder['Next Payment'] = tamilDateRes.data.gregorianDate;
+        delete parsedReminder.tamilMonthIndex; // Clean up
+        delete parsedReminder.tamilDay; // Clean up
+      } catch (tamilErr) {
+        console.error('Tamil date conversion failed:', tamilErr.message);
+        return res.json({ question: "I understood a Tamil date, but I couldn't convert it. Can you provide the Gregorian date instead?" });
+      }
+    }
 
     // Basic validation and default values
     if (!parsedReminder.Name || !parsedReminder["Next Payment"]) {
