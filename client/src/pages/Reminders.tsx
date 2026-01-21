@@ -1,4 +1,4 @@
-import { useEffect, useState } => 'react';
+import { useEffect, useState } from 'react';
 import axios from 'axios';
 import { Card, Table, Container, Badge, Spinner, Button, Stack } from 'react-bootstrap';
 import { Plus, Edit2, Trash2 } from 'lucide-react';

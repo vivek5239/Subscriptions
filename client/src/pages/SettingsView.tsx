@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Container, Card, Form, Button, Row, Col } from 'react-bootstrap';
-import { Save, Bot, Bell, Palette, Check, Moon, CalendarDays, UploadCloud } from 'lucide-react';
+import { Save, Bot, Bell, Palette, Check, Moon } from 'lucide-react';
 import axios from 'axios';
 import type { Settings } from '../types';
 import { useTheme, type ThemeColor } from '../context/ThemeContext';
@@ -389,32 +389,7 @@ export default function SettingsView() {
           </Card.Body>
         </Card>
 
-        {/* General Settings */}
-        <Card className="shadow-sm mb-4">
-          <Card.Header className="bg-transparent py-3 border-bottom-0 d-flex align-items-center gap-2">
-            <ShieldCheck className="text-success" size={20} />
-            <h6 className="mb-0 fw-bold">General Configuration</h6>
-          </Card.Header>
-          <Card.Body>
-            <Form.Group className="mb-3">
-              <Form.Label>Main Currency</Form.Label>
-              <Form.Select 
-                value={config.mainCurrency}
-                onChange={(e) => setConfig({...config, mainCurrency: e.target.value})}
-                style={{ width: '200px' }}
-                className="bg-body border-secondary border-opacity-25"
-              >
-                <option value="INR">INR (₹)</option>
-                <option value="USD">USD ($)</option>
-                <option value="EUR">EUR (€)</option>
-                <option value="GBP">GBP (£)</option>
-              </Form.Select>
-              <Form.Text className="text-muted">
-                All statistics and Dashboard KPIs will be displayed in this currency.
-              </Form.Text>
-            </Form.Group>
-          </Card.Body>
-        </Card>
+
 
         <div className="d-flex justify-content-end">
           <Button variant="primary" type="submit" className="d-flex align-items-center gap-2 px-4 rounded-pill shadow-sm">

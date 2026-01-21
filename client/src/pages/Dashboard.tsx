@@ -5,11 +5,17 @@ import { CheckCircle, PlusCircle, Clock, CalendarX } from 'lucide-react';
 import { format, parseISO, differenceInDays } from 'date-fns';
 import type { DashboardData, Reminder } from '../types';
 
+interface ConversationTurn {
+  role: 'user' | 'assistant';
+  content: string;
+}
+
 export default function Dashboard() {
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [nlReminderText, setNlReminderText] = useState('');
   const [nlReminderLoading, setNlReminderLoading] = useState(false);
+  const [aiConversation, setAiConversation] = useState<ConversationTurn[]>([]);
 
   useEffect(() => {
     fetchData();
@@ -28,10 +34,15 @@ export default function Dashboard() {
 
   const handleMarkPaid = async (id: string) => {
     try {
-      await axios.post(`/api/reminders/${id}/pay`);
-      fetchData();
+      // For a non-financial reminder app, "Mark as Paid" is now "Mark as Done"
+      // which can be implemented by simply deleting the reminder.
+      // A more sophisticated approach could be to move it to a "completed" list.
+      if (window.confirm('Mark this reminder as done? This will remove it from the list.')) {
+        await axios.delete(`/api/reminders/${id}`);
+        fetchData();
+      }
     } catch (err) {
-      console.error('Error marking as paid:', err);
+      console.error('Error marking as done:', err);
     }
   };
 
@@ -46,15 +57,27 @@ export default function Dashboard() {
     }
 
     setNlReminderLoading(true);
+
+    const userTurn: ConversationTurn = { role: 'user', content: nlReminderText };
+    const conversation = [...aiConversation, userTurn];
+    
     try {
-      await axios.post('/api/ai/create-reminder', {
-        text: nlReminderText,
+      const res = await axios.post('/api/ai/create-reminder', {
+        conversation,
         apiKey: config.groqApiKey
       });
-      setNlReminderText('');
-      fetchData(); // Refresh reminders
+
+      if (res.data.status === 'question') {
+        setAiConversation([...conversation, { role: 'assistant', content: res.data.question }]);
+        setNlReminderText('');
+      } else {
+        setAiConversation([]);
+        setNlReminderText('');
+        fetchData(); // Refresh reminders
+      }
     } catch (err: any) {
       alert(err.response?.data?.error || 'Failed to create reminder via AI');
+      setAiConversation([]);
     } finally {
       setNlReminderLoading(false);
     }
@@ -136,11 +159,22 @@ export default function Dashboard() {
         {/* Groq AI Natural Language Input */}
         <Card className="shadow-sm mb-4">
             <Card.Body className="p-3">
+                {aiConversation.length > 0 && (
+                  <div className="mb-3 p-3 bg-light rounded">
+                    {aiConversation.map((turn, index) => (
+                      <div key={index} className={`d-flex flex-column ${turn.role === 'user' ? 'align-items-end' : 'align-items-start'}`}>
+                        <div className={`p-2 rounded mb-2 ${turn.role === 'user' ? 'bg-primary text-white' : 'bg-secondary text-white'}`}>
+                          {turn.content}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
                 <Form onSubmit={handleNlReminderSubmit}>
                     <InputGroup>
                         <Form.Control
                             type="text"
-                            placeholder="Create a reminder... e.g., 'Pay electricity bill on the 25th of every month'"
+                            placeholder={aiConversation.length > 0 ? "Answer the AI's question..." : "Create a reminder... e.g., 'Pay electricity bill on the 25th of every month'"}
                             value={nlReminderText}
                             onChange={(e) => setNlReminderText(e.target.value)}
                             disabled={nlReminderLoading}
