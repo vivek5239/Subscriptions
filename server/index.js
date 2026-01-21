@@ -55,13 +55,9 @@ app.delete('/api/reminders/:id', async (req, res) => {
 // Settings Endpoints
 app.post('/api/settings', async (req, res) => {
   try {
-    let oldSettings = {};
-    try {
-      const data = await fs.readFile(settingsPath, 'utf-8');
-      oldSettings = JSON.parse(data);
-    } catch (e) {
-      // Ignore if file doesn't exist
-    }
+    await ensureSettingsFile(); // Ensure file exists and is valid
+    const data = await fs.readFile(settingsPath, 'utf-8');
+    const oldSettings = JSON.parse(data);
 
     const newSettings = { ...oldSettings, ...req.body };
     await fs.writeFile(settingsPath, JSON.stringify(newSettings, null, 2));
@@ -71,13 +67,14 @@ app.post('/api/settings', async (req, res) => {
 
     res.json({ success: true });
   } catch (error) {
+    console.error('Error in POST /api/settings:', error);
     res.status(500).json({ error: error.message });
   }
 });
 
 app.get('/api/settings', async (req, res) => {
   try {
-    const settingsPath = path.join(__dirname, '../data/settings.json');
+    await ensureSettingsFile(); // Ensure file exists and is valid
     const data = await fs.readFile(settingsPath, 'utf-8');
     const settings = JSON.parse(data);
     res.json({
@@ -86,6 +83,9 @@ app.get('/api/settings', async (req, res) => {
       lastDailyCheck: settings.lastDailyCheck || null,
     });
   } catch (error) {
+    // If still an error, it means file exists but is bad JSON despite ensure.
+    // Or ensureSettingsFile itself failed. Return default in this case.
+    console.error(`[Settings] Error getting settings even after ensure: ${error.message}`);
     res.json({ dailyCheckTime: '09:00', lastDailyCheck: null });
   }
 });
@@ -449,7 +449,20 @@ app.post('/api/test/email', async (req, res) => {
   }
 });
 
+const DATA_PATH = path.join(__dirname, '../data/reminders.json');
 const settingsPath = path.join(__dirname, '../data/settings.json');
+
+// Function to ensure settings.json exists and is valid JSON
+async function ensureSettingsFile() {
+  try {
+    const data = await fs.readFile(settingsPath, 'utf-8');
+    JSON.parse(data); // Try to parse to check if it's valid JSON.
+  } catch (e) {
+    // If file doesn't exist (ENOENT) or is invalid JSON, create/overwrite with an empty object
+    console.warn(`[Settings] settings.json not found or invalid, initializing with empty object. Error: ${e.message}`);
+    await fs.writeFile(settingsPath, '{}');
+  }
+}
 
 let dailyReminderJob;
 
@@ -483,6 +496,7 @@ function scheduleDailyReminder() {
 
 app.listen(PORT, async () => {
   console.log(`Server running on http://localhost:${PORT}`);
+  await ensureSettingsFile(); // Ensure settings file exists
   // Schedule the daily reminder job
   scheduleDailyReminder();
 });
