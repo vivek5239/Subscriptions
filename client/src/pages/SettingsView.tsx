@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Container, Card, Form, Button, Row, Col } from 'react-bootstrap';
-import { Save, Bot, Bell, Palette, Check, Moon } from 'lucide-react';
+import { Save, Bot, Bell, Palette, Check, Moon, Calendar } from 'lucide-react';
 import axios from 'axios';
 import type { Settings } from '../types';
 import { useTheme, type ThemeColor } from '../context/ThemeContext';
@@ -389,7 +389,31 @@ export default function SettingsView() {
           </Card.Body>
         </Card>
 
-
+        {/* Calendar Import Settings */}
+        <Card className="shadow-sm mb-4">
+          <Card.Header className="bg-transparent py-3 border-bottom-0 d-flex align-items-center gap-2">
+            <Calendar className="text-primary" size={20} />
+            <h6 className="mb-0 fw-bold">Calendar Import</h6>
+          </Card.Header>
+          <Card.Body>
+            <p className="text-muted">
+              Import events from your favorite calendar services to quickly turn them into reminders.
+            </p>
+            <Stack gap={3}>
+              <Button variant="outline-secondary" disabled>Import from Google Calendar</Button>
+              <Button variant="outline-secondary" disabled>Import from Outlook Calendar</Button>
+              
+              <Form.Group>
+                <Form.Label>Import from .ics file</Form.Label>
+                <Form.Control type="file" accept=".ics" disabled />
+              </Form.Group>
+            </Stack>
+            <hr />
+            <p className="small text-muted mb-0">
+              <strong>Information Required:</strong> To import from Google or Outlook, you will be asked to grant this application read-only access to your calendar events. We will not store your login credentials. We will only process the events you choose to import and will not modify your calendar in any way.
+            </p>
+          </Card.Body>
+        </Card>
 
         <div className="d-flex justify-content-end">
           <Button variant="primary" type="submit" className="d-flex align-items-center gap-2 px-4 rounded-pill shadow-sm">

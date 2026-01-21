@@ -134,27 +134,36 @@ app.post('/api/ai/create-reminder', async (req, res) => {
     const groq = new Groq({ apiKey: apiKey });
     
     const prompt = `
-      Parse the following natural language reminder text into a JSON object with the following structure:
+      Parse the following natural language text into a structured JSON object for a reminder.
+
+      The final JSON object must have this structure:
       {
         "Name": "string",
         "Next Payment": "YYYY-MM-DD",
-        "Category": "string (e.g., 'General', 'Work', 'Personal')",
-        "Active": "Yes" | "No",
-        "Notes": "string (optional notes)"
+        "Category": "string",
+        "Active": "Yes",
+        "Notes": "string (optional)"
       }
-      
-      If a specific date is not provided, use today's date. If a year is not specified, assume the current year.
-      Ensure "Active" is always "Yes" for new reminders.
-      
+
+      - Today's date is ${new Date().toISOString().split('T')[0]}.
+      - If a year is not specified, assume the current year.
+      - "Active" should always be "Yes".
+
       Natural language text: "${text}"
-      
-      Provide ONLY the JSON object in your response. Do not include any other text or markdown.
+
+      **Your Task:**
+
+      1.  **If you have all the necessary information** (at least a "Name" and a "Next Payment" date), respond with ONLY the final JSON object.
+      2.  **If information is missing or ambiguous** (e.g., "remind me to call John", but no date), you MUST ask a single, clear clarifying question. Your response in this case MUST be a JSON object with a "question" field, like this:
+          { "question": "When would you like to be reminded to call John?" }
+          
+      Do not generate a reminder if you are missing information; ask a question instead.
     `;
 
     const chatCompletion = await groq.chat.completions.create({
       messages: [{ role: 'user', content: prompt }],
       model: 'llama-3.3-70b-versatile',
-      response_format: { type: "json_object" }, // Request JSON object directly
+      response_format: { type: "json_object" },
     });
 
     const aiResponse = chatCompletion.choices[0]?.message?.content;
@@ -162,23 +171,31 @@ app.post('/api/ai/create-reminder', async (req, res) => {
         throw new Error("AI did not return a valid response.");
     }
     
-    const parsedReminder = JSON.parse(aiResponse);
+    const parsedResponse = JSON.parse(aiResponse);
 
-    // Basic validation and default values for parsedReminder
+    // Check if the AI is asking a question
+    if (parsedResponse.question) {
+      return res.json({ question: parsedResponse.question });
+    }
+
+    // If not a question, it should be a reminder object
+    const parsedReminder = parsedResponse;
+
+    // Basic validation and default values
     if (!parsedReminder.Name || !parsedReminder["Next Payment"]) {
-        throw new Error("AI failed to parse essential reminder details (Name, Next Payment).");
+      // If the AI fails to return the required fields or a question, ask a generic question.
+      return res.json({ question: "I couldn't quite understand that. Could you provide more details, like a name and a date for the reminder?" });
     }
 
     // Ensure 'Next Payment' is a valid date
     const date = new Date(parsedReminder["Next Payment"]);
     if (isNaN(date.getTime())) {
-        // If AI gives an invalid date, try to default to today
         parsedReminder["Next Payment"] = new Date().toISOString().split('T')[0];
     } else {
         parsedReminder["Next Payment"] = date.toISOString().split('T')[0];
     }
 
-    parsedReminder.Active = "Yes"; // Always active for new reminders via AI
+    parsedReminder.Active = "Yes";
 
     const savedReminder = await saveReminder(parsedReminder);
     res.json(savedReminder);
@@ -303,8 +320,8 @@ async function runDailyReminderCheck() {
       const diffTime = dueDate.getTime() - today.getTime();
       const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
       
-      console.log(`[Reminder] Checking ${rem.Name}: Due ${rem['Next Payment']}, Diff Days: ${diffDays}`);
-      return diffDays >= 0 && diffDays <= 3; 
+      console.log(`[Reminder] Checking ${rem.Name}: Due ${rem['Next Payment']}, Diff Days: ${diffDays}, Remind Before: ${rem.remindBefore ?? 'default (3)'}`);
+      return diffDays >= 0 && diffDays <= (rem.remindBefore ?? 3); 
     });
 
     if (dueSoon.length > 0) {

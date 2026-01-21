@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
+import { useLocation } from 'react-router-dom';
 import axios from 'axios';
 import { Card, Table, Container, Badge, Spinner, Button, Stack } from 'react-bootstrap';
 import { Plus, Edit2, Trash2 } from 'lucide-react';
@@ -10,12 +11,36 @@ export default function Reminders() {
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [selectedSub, setSelectedSub] = useState<Reminder | null>(null);
+  const [highlightedId, setHighlightedId] = useState<string | null>(null);
+  const location = useLocation();
+  const highlightedRef = useRef<HTMLTableRowElement>(null);
 
   useEffect(() => {
     fetchData();
   }, []);
 
+  useEffect(() => {
+    if (location.state?.newReminderId) {
+      setHighlightedId(location.state.newReminderId);
+      // Remove the highlight after the animation
+      const timer = setTimeout(() => {
+        setHighlightedId(null);
+        // Clean up location state to prevent re-highlighting on refresh
+        window.history.replaceState({}, document.title)
+      }, 3000);
+
+      return () => clearTimeout(timer);
+    }
+  }, [location.state]);
+
+  useEffect(() => {
+    if (highlightedId && highlightedRef.current) {
+      highlightedRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }, [highlightedId, reminders]);
+
   const fetchData = async () => {
+    setLoading(true);
     try {
       const res = await axios.get('/api/reminders');
       setReminders(res.data.reminders);
@@ -81,7 +106,11 @@ export default function Reminders() {
           </thead>
           <tbody>
             {reminders.map((rem) => (
-              <tr key={rem.id} className="bg-transparent">
+              <tr 
+                key={rem.id} 
+                ref={rem.id === highlightedId ? highlightedRef : null}
+                className={rem.id === highlightedId ? 'highlight' : ''}
+              >
                 <td className="ps-4">
                   <div className="d-flex align-items-center">
                     <span className="fw-medium">{rem.Name}</span>

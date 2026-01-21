@@ -1,119 +1,128 @@
-# Technical Documentation: Reminders
+# Technical Documentation for OmniRemindersV2
 
-## 1. Architecture Overview
+## 1. Project Overview
 
-**Reminders** is a full-stack web application designed to track and manage recurring reminders. It follows a **Monolithic Repository (Monorepo)** structure but separates concerns into a distinct Client (Frontend) and Server (Backend).
+OmniRemindersV2 is a web-based application designed to help users manage their reminders and recurring tasks efficiently. The application provides a clean user interface to create, view, edit, and delete reminders. It features a dashboard for a quick overview, a detailed list of all reminders, and a calendar view for a monthly perspective.
 
-*   **Frontend**: Single Page Application (SPA) built with React and TypeScript.
-*   **Backend**: RESTful API built with Node.js and Express.
-*   **Database**: JSON-based flat-file storage (`reminders.json`), ensuring portability and simplicity without the overhead of a SQL database.
-*   **Deployment**: Containerized using Docker, serving both the API and the static frontend assets from a single container.
+The application is built with a modern tech stack, featuring a React frontend and a Node.js (Express) backend. It is containerized using Docker for easy setup and deployment. Key features include AI-powered reminder creation from natural language, reminder analysis, and a notification system for upcoming reminders via email and Gotify.
 
 ## 2. Tech Stack
 
-### Frontend (`/client`)
-*   **Framework**: React 18
-*   **Language**: TypeScript
-*   **Build Tool**: Vite
-*   **Styling**: Bootstrap 5 (React-Bootstrap) + Custom CSS
-*   **Icons**: Lucide-React
-*   **HTTP Client**: Axios
-*   **Date Handling**: date-fns
+### Frontend
+- **Framework:** React (v19) with Vite
+- **Language:** TypeScript
+- **Styling:**
+  - Bootstrap & React-Bootstrap: For UI components and layout.
+  - `lucide-react`: For icons.
+- **Routing:** React Router DOM (v7)
+- **HTTP Client:** Axios
+- **State Management:** React Context API (for theme)
+- **Data Visualization:** Recharts (for charts on the dashboard)
+- **Calendar/Date:** `react-calendar` and `react-datepicker`
 
-### Backend (`/server`)
-*   **Runtime**: Node.js
-*   **Framework**: Express.js
-*   **Language**: JavaScript (ES Modules)
-*   **Data Access**: Native `fs/promises` for JSON manipulation.
-*   **Currency Math**: Custom logic for symbol parsing and INR normalization.
+### Backend
+- **Framework:** Express.js on Node.js
+- **Language:** JavaScript (ES Modules)
+- **API:** RESTful
+- **Database:** Simple file-based storage (JSON files in the `/data` directory).
+  - `reminders.json`: Stores all reminder data.
+  - `settings.json`: Stores application and notification settings.
+- **AI Integration:**
+  - Groq SDK (`groq-sdk`): For natural language processing to parse and create reminders.
+- **Authentication:**
+  - JSON Web Tokens (JWT): For securing API endpoints.
+  - `google-auth-library`: For backend verification of Google OAuth tokens.
+- **Notifications:**
+  - Nodemailer: For sending email notifications.
+  - Gotify: For sending push notifications (via Axios).
+- **Scheduling:** `node-cron`: For scheduling daily checks for upcoming reminders.
 
-## 3. Data Flow
+### Development & Deployment
+- **Containerization:** Docker & Docker Compose
+- **Web Server:** The Express server also serves the static React build.
 
-1.  **Read**: The React Client requests `GET /api/reminders`.
-2.  **Process**:
-    *   The Express Server reads `data/reminders.json`.
-    *   It iterates through records, parsing `Price` strings (e.g., "$10", "₹500").
-    *   It applies a conversion rate (defined in `currency.js`) to normalize all values to **INR**.
-    *   It calculates KPIs (Monthly Total, Yearly Total, Active Count).
-    *   It identifies "Upcoming Payments" based on the `Next Payment` date.
-3.  **Response**: The server returns an enriched JSON object containing both the raw list and the calculated statistics.
-4.  **Render**: The Client receives the data and renders the Dashboard and Reminder Table.
+## 3. Project Structure
 
-## 4. Directory Structure
+The project is organized into two main directories: `client` and `server`.
 
-```text
-Reminders/
-├── client/                 # React Frontend
+```
+/
+├── client/              # React frontend application
 │   ├── src/
-│   │   ├── App.tsx         # Main Component (Dashboard Logic)
-│   │   ├── main.tsx        # Entry Point
-│   │   └── ...
-│   └── vite.config.ts      # Build Configuration
-├── server/                 # Node.js Backend
-│   ├── index.js            # Entry Point & API Routes
-│   ├── db.js               # File System Operations (CRUD)
-│   ├── currency.js         # Currency Conversion Logic
-│   └── public/             # Static assets (populated during Docker build)
-├── data/                   # Data Storage
-│   └── reminders.json  # The "Database"
-├── Dockerfile              # Multi-stage build definition
-├── docker-compose.yml      # Container orchestration
-└── README.md               # User Guide
+│   │   ├── components/  # Reusable React components
+│   │   ├── context/     # React context providers (e.g., ThemeContext)
+│   │   ├── pages/       # Top-level page components (Dashboard, Reminders, etc.)
+│   │   └── App.tsx      # Main app component with routing
+│   ├── package.json
+│   └── vite.config.ts
+├── server/              # Node.js Express backend
+│   ├── routes/          # (currently empty, routes are in index.js)
+│   ├── index.js         # Main server entry point with all API logic
+│   ├── db.js            # Handles all interactions with the JSON database
+│   └── package.json
+├── data/                # Persisted data (created on run)
+│   ├── reminders.json
+│   └── settings.json
+├── Dockerfile           # Multi-stage Dockerfile for building and running the app
+├── docker-compose.yml   # Docker Compose for local development
+└── TECHNICAL_DOCS.md    # This file
 ```
 
-## 5. API Endpoints
+## 4. Getting Started
 
-| Method | Endpoint | Description |
-| :--- | :--- | :--- |
-| `GET` | `/api/reminders` | Returns all reminders and calculated Dashboard Stats. |
-| `POST` | `/api/reminders` | Creates or Updates a reminder (Upsert). |
-| `DELETE` | `/api/reminders/:id` | Deletes a reminder by ID. |
-| `GET` | `/*` | Serves the React Client (SPA Fallback) for non-API requests. |
+### Prerequisites
+- Docker and Docker Compose installed and running.
 
-## 6. Logic Highlights
+### Running the Application
+1. Clone the repository.
+2. From the project root, run the following command:
+   ```bash
+   docker-compose up -d --build
+   ```
+3. The application will be available at `http://localhost:5006`.
 
-### Currency Normalization (`server/currency.js`)
-The app uses a simplistic but effective heuristic to parse prices:
-1.  Detects symbols (`$`, `₹`, `€`, `£`) or codes (`USD`, `INR`).
-2.  Strips non-numeric characters (commas, spaces).
-3.  Converts the value to **INR** using a hardcoded exchange rate table (e.g., $1 = ₹85.5).
+The `docker-compose.yml` configuration builds the Docker image using the `Dockerfile` and mounts the `./data` directory to persist application data.
 
-### Logo Fetching (`client/src/App.tsx`)
-The frontend component `<Logo />` attempts to resolve a brand logo dynamically:
-1.  **Clearbit API**: `https://logo.clearbit.com/{domain}`.
-2.  **Fallback**: If the image fails to load, it generates a text-based avatar using `ui-avatars.com`.
+## 5. Core Features & Logic
 
-## 7. Deployment (Docker)
+### Reminder Management
+- **CRUD Operations:** The backend provides API endpoints to Create, Read, Update, and Delete reminders. These operations are handled in `server/db.js` and exposed via Express routes in `server/index.js`.
+- **Data Storage:** Reminders are stored in `data/reminders.json`, with each reminder having a unique ID generated by `crypto.randomUUID()`.
 
-The `Dockerfile` utilizes a **Multi-Stage Build** to minimize image size:
+### AI Integration
+- **AI Reminder Creation (`/api/ai/create-reminder`):**
+  - Takes a natural language string (e.g., "Call dad next Tuesday").
+  - Uses the Groq API to parse the string into a structured JSON object representing the reminder.
+  - The backend validates the AI's output and saves the new reminder.
+- **AI Analysis (`/api/ai/analyze`):**
+  - This endpoint sends all active reminders to the Groq API.
+  - It asks for a summary, suggestions for better management, and an assessment of category distribution.
 
-1.  **Stage 1 (client-build)**:
-    *   Installs client dependencies.
-    *   Runs `vite build` to generate optimized static files (`dist/`).
-2.  **Stage 2 (Production)**:
-    *   Installs server dependencies (production only).
-    *   Copies server code.
-    *   Copies the `dist/` folder from Stage 1 into `server/public`.
-    *   Exposes Port 5000.
+### Notifications
+- **Scheduled Checks:** A cron job is scheduled using `node-cron` to run a daily check for reminders that are due soon (within the next 3 days).
+- **Notification Channels:** If upcoming reminders are found, the system can send notifications via:
+  - **Email:** Using Nodemailer. SMTP server details are configured in the settings.
+  - **Gotify:** A self-hostable push notification service. The Gotify URL and token are configured in the settings.
+- **Configuration:** All notification settings (SMTP, Gotify, and a master enable/disable toggle) are managed through the Settings page and stored in `data/settings.json`.
 
-**Volume Mapping**:
-The `docker-compose.yml` maps the host's `./data` folder to `/data` inside the container. This ensures that `reminders.json` persists even if the container is destroyed.
+## 6. API Endpoints
 
-## 8. Future Roadmap
+All endpoints are prefixed with `/api`.
 
-1.  **Groq AI Integration**:
+- `GET /reminders`: Fetches all reminders.
+- `POST /reminders`: Saves a new reminder or updates an existing one.
+- `DELETE /reminders/:id`: Deletes a reminder by its ID.
+- `GET /settings`: Retrieves the current application settings.
+- `POST /settings`: Updates the application settings.
+- `POST /ai/analyze`: Triggers the AI analysis of active reminders.
+- `POST /ai/create-reminder`: Creates a new reminder from natural language text.
+- `POST /convert-tamil-date`: A utility endpoint to convert a Tamil calendar date to a Gregorian date.
+- `POST /test/*`: A set of endpoints for testing notification channels (email, Gotify) and the reminder check logic.
 
-*   Implement an endpoint `/api/analyze` that sends the reminder JSON to Groq's llama-3.3-70b-versatile model.
+## 7. Frontend Architecture
 
-
-
-
-    *   Prompt: "Analyze these expenses and suggest 3 ways to save money."
-
-2.  **Notifications**:
-    *   Integrate `node-cron` in `server/index.js` to run a daily check at 09:00 AM.
-    *   Send HTTP POST requests to a Gotify instance for due payments.
-    *   Use `nodemailer` to send summary emails.
-
-3.  **Live Currency Rates**:
-    *   Replace fixed rates in `currency.js` with a daily fetch from an external Exchange Rate API.
+- **Component-Based:** The UI is built with reusable React components located in `src/components`.
+- **Page-Based Routing:** `react-router-dom` maps URLs to specific page components in `src/pages`.
+- **Main Layout:** A consistent layout (`AppLayout.tsx`) provides the navbar and sidebar, wrapping the content of each page.
+- **Data Fetching:** Components fetch data from the backend API using Axios. For example, the `Reminders.tsx` page fetches all reminders on load to display them in a table.
+- **Modal for Editing/Creation:** The `ReminderModal.tsx` component is used for both creating new reminders and editing existing ones.

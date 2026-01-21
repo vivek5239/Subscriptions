@@ -5,6 +5,7 @@ export interface Reminder {
   Category: string;
   Active: 'Yes' | 'No';
   Notes?: string;
+  remindBefore?: number;
 }
 
 export interface DashboardData {

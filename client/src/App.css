@@ -40,3 +40,12 @@
 .read-the-docs {
   color: #888;
 }
+
+@keyframes highlight-fade {
+  from { background-color: #f8e71c; }
+  to { background-color: transparent; }
+}
+
+.highlight {
+  animation: highlight-fade 3s ease-out;
+}

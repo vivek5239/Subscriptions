@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { Card, Container, Row, Col, Badge, Spinner, Button, Form, InputGroup } from 'react-bootstrap';
 import { CheckCircle, PlusCircle, Clock, CalendarX } from 'lucide-react';
@@ -16,6 +17,7 @@ export default function Dashboard() {
   const [nlReminderText, setNlReminderText] = useState('');
   const [nlReminderLoading, setNlReminderLoading] = useState(false);
   const [aiConversation, setAiConversation] = useState<ConversationTurn[]>([]);
+  const navigate = useNavigate();
 
   useEffect(() => {
     fetchData();
@@ -59,25 +61,33 @@ export default function Dashboard() {
     setNlReminderLoading(true);
 
     const userTurn: ConversationTurn = { role: 'user', content: nlReminderText };
-    const conversation = [...aiConversation, userTurn];
+    const updatedConversation = [...aiConversation, userTurn];
     
+    // Construct the full text for the AI
+    const textForAi = updatedConversation.map(turn => `${turn.role}: ${turn.content}`).join('\n');
+
     try {
       const res = await axios.post('/api/ai/create-reminder', {
-        conversation,
+        text: textForAi,
         apiKey: config.groqApiKey
       });
 
-      if (res.data.status === 'question') {
-        setAiConversation([...conversation, { role: 'assistant', content: res.data.question }]);
+      if (res.data.question) {
+        // AI is asking a question
+        setAiConversation([...updatedConversation, { role: 'assistant', content: res.data.question }]);
         setNlReminderText('');
       } else {
+        // AI created a reminder
+        const newReminder = res.data;
+        alert('AI has successfully created your reminder!');
         setAiConversation([]);
         setNlReminderText('');
-        fetchData(); // Refresh reminders
+        navigate('/reminders', { state: { newReminderId: newReminder.id } });
       }
     } catch (err: any) {
       alert(err.response?.data?.error || 'Failed to create reminder via AI');
-      setAiConversation([]);
+      // Optionally reset conversation on error
+      // setAiConversation([]);
     } finally {
       setNlReminderLoading(false);
     }

@@ -39,6 +39,7 @@ export default function ReminderModal({ show, onHide, onSave, reminder }: Remind
     Category: 'General',
     Active: 'Yes',
     Notes: '',
+    remindBefore: 3, // Default to 3 days before
   });
   const [useTamilDate, setUseTamilDate] = useState(false);
   const [tamilMonth, setTamilMonth] = useState(0); // Index of TAMIL_MONTHS
@@ -47,7 +48,8 @@ export default function ReminderModal({ show, onHide, onSave, reminder }: Remind
   useEffect(() => {
     if (reminder) {
       setFormData({
-        ...reminder
+        ...reminder,
+        remindBefore: typeof reminder.remindBefore === 'number' ? reminder.remindBefore : 3,
       });
       setUseTamilDate(false); 
     } else {
@@ -57,6 +59,7 @@ export default function ReminderModal({ show, onHide, onSave, reminder }: Remind
         Category: 'General',
         Active: 'Yes',
         Notes: '',
+        remindBefore: 3,
       });
       setUseTamilDate(false);
       setTamilMonth(0);
@@ -162,6 +165,22 @@ export default function ReminderModal({ show, onHide, onSave, reminder }: Remind
                 {CATEGORIES.map(cat => (
                   <option key={cat} value={cat}>{cat}</option>
                 ))}
+              </Form.Select>
+            </Form.Group>
+          </Row>
+
+          <Row className="mb-3">
+            <Form.Group as={Col} md={6}>
+              <Form.Label>Remind Me Before</Form.Label>
+              <Form.Select
+                value={formData.remindBefore}
+                onChange={(e) => setFormData({ ...formData, remindBefore: parseInt(e.target.value) })}
+              >
+                <option value={0}>On the day</option>
+                <option value={1}>1 day before</option>
+                <option value={2}>2 days before</option>
+                <option value={3}>3 days before</option>
+                <option value={7}>7 days before</option>
               </Form.Select>
             </Form.Group>
           </Row>
