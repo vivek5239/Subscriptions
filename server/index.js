@@ -55,12 +55,17 @@ app.delete('/api/reminders/:id', async (req, res) => {
 // Settings Endpoints
 app.post('/api/settings', async (req, res) => {
   try {
+    console.log('[Settings] Received req.body:', req.body);
     await ensureSettingsFile(); // Ensure file exists and is valid
     const data = await fs.readFile(settingsPath, 'utf-8');
     const oldSettings = JSON.parse(data);
+    console.log('[Settings] Old settings before merge:', oldSettings);
 
     const newSettings = { ...oldSettings, ...req.body };
+    console.log('[Settings] New settings after merge:', newSettings);
+
     await fs.writeFile(settingsPath, JSON.stringify(newSettings, null, 2));
+    console.log('[Settings] Settings written successfully to:', settingsPath);
     
     // Reschedule the job if the time has changed
     scheduleDailyReminder();
@@ -74,9 +79,11 @@ app.post('/api/settings', async (req, res) => {
 
 app.get('/api/settings', async (req, res) => {
   try {
+    console.log('[Settings] Reading settings from:', settingsPath);
     await ensureSettingsFile(); // Ensure file exists and is valid
     const data = await fs.readFile(settingsPath, 'utf-8');
     const settings = JSON.parse(data);
+    console.log('[Settings] Parsed settings from file:', settings);
     res.json({
       ...settings,
       dailyCheckTime: settings.dailyCheckTime || '09:00',
