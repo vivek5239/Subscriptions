@@ -1,6 +1,5 @@
-
-## 2026-01-21
-- Enhanced AI to understand and convert Tamil dates using the `/api/convert-tamil-date` endpoint in `server/index.js`.
-- Enhanced AI to create reminders for named events (e.g., "Diwali"), inferring dates or asking clarifying questions in `server/index.js`.
-- Enabled and implemented basic `.ics` file import functionality in `client/src/pages/SettingsView.tsx`, including parsing ICS content and saving events as reminders.
-- Enabled Google/Outlook calendar import buttons in `client/src/pages/SettingsView.tsx` with placeholder functionality.
+## 2026-01-21 (Continued)
+- Implemented bulk delete functionality for reminders in `client/src/pages/Reminders.tsx`, allowing users to select and delete multiple records.
+- Added sorting options to the "All Reminders" list in `client/src/pages/Reminders.tsx`, allowing sorting by 'Name', 'Next Payment', and 'Category' in ascending or descending order.
+- Added filtering options (by date, category, status) to the "All Reminders" list in `client/src/pages/Reminders.tsx`.
+- Enhanced the calendar page in `client/src/pages/CalendarView.tsx` to display full reminder details (Name, Date, Category, Notes) for a selected date, ensuring messages are not truncated.

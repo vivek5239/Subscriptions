@@ -98,16 +98,25 @@ export default function CalendarView() {
                 {selectedDaySubs.length > 0 ? (
                   selectedDaySubs.map(rem => (
                     <ListGroup.Item key={rem.id} className="py-3 bg-transparent border-0 border-bottom">
-                      <div className="d-flex justify-content-between align-items-center mb-1">
-                        <div className="d-flex align-items-center">
-                          <span className="fw-medium text-truncate" style={{ maxWidth: '120px' }}>{rem.Name}</span>
-                        </div>
+                      <div className="d-flex flex-column align-items-start">
+                        <span className="fw-medium fs-5 text-primary mb-1">{rem.Name}</span>
+                        <small className="text-muted mb-1">
+                          <strong>Date:</strong> {format(parseISO(rem['Next Payment']), 'MMM dd, yyyy')}
+                        </small>
+                        <small className="text-muted mb-1">
+                          <strong>Category:</strong> {rem.Category}
+                        </small>
+                        {rem.Notes && (
+                          <small className="text-muted">
+                            <strong>Notes:</strong> {rem.Notes}
+                          </small>
+                        )}
                       </div>
                     </ListGroup.Item>
                   ))
                 ) : (
                   <div className="p-4 text-center text-muted">
-                    No reminders scheduled.
+                    No reminders scheduled for this date.
                   </div>
                 )}
               </ListGroup>
