@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import axios from 'axios';
-import { Card, Table, Container, Badge, Spinner, Button, Stack } from 'react-bootstrap';
+import { Card, Table, Container, Badge, Spinner, Button, Stack, Row, Col, Form } from 'react-bootstrap';
 import { Plus, Edit2, Trash2, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 import type { Reminder } from '../types';
 import ReminderModal from '../components/ReminderModal';
@@ -105,6 +105,11 @@ export default function Reminders() {
     } catch (err) {
       console.error('Error deleting reminder:', err);
     }
+  };
+
+  const openAddModal = () => {
+    setSelectedSub(null);
+    setShowModal(true);
   };
 
   const openEditModal = (rem: Reminder) => {
@@ -245,7 +250,7 @@ export default function Reminders() {
             </tr>
           </thead>
           <tbody>
-            {getSortedReminders().map((rem) => (
+            {getFilteredAndSortedReminders().map((rem) => (
               <tr 
                 key={rem.id} 
                 ref={rem.id === highlightedId ? highlightedRef : null}
