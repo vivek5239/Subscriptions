@@ -17,7 +17,7 @@ const PORT = process.env.PORT || 5000;
 
 app.use(cors());
 app.use(express.json());
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(path.join(__dirname, '..', 'client', 'dist')));
 
 // --- API Endpoints ---
 
@@ -283,7 +283,7 @@ app.post('/api/convert-tamil-date', (req, res) => {
 
 // SPA Fallback (Must be last)
 app.get(/^(?!\/api).+/, (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+  res.sendFile(path.join(__dirname, '..', 'client', 'dist', 'index.html'));
 });
 
 // --- Scheduled Tasks ---
