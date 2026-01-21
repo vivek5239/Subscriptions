@@ -459,7 +459,6 @@ async function ensureSettingsFile() {
     JSON.parse(data); // Try to parse to check if it's valid JSON.
   } catch (e) {
     // If file doesn't exist (ENOENT) or is invalid JSON, create/overwrite with an empty object
-    console.warn(`[Settings] settings.json not found or invalid, initializing with empty object. Error: ${e.message}`);
     await fs.writeFile(settingsPath, '{}');
   }
 }
