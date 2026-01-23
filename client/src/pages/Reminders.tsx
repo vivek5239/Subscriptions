@@ -2,13 +2,18 @@ import { useEffect, useState, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import axios from 'axios';
 import { Card, Table, Container, Badge, Spinner, Button, Stack, Row, Col, Form } from 'react-bootstrap';
-import { Plus, Edit2, Trash2, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
+import { Plus, Edit2, Trash2, ArrowUpDown, ArrowUp, ArrowDown, Copy } from 'lucide-react';
 import type { Reminder } from '../types';
 import ReminderModal from '../components/ReminderModal';
 
 const CATEGORIES = [
   'General', 'Work', 'Personal', 'Health', 'Finance', 'Appointments',
   'Study', 'Travel', 'Shopping', 'Other', 'Imported'
+];
+
+const TAMIL_MONTH_NAMES = [
+  'Chithirai', 'Vaikasi', 'Aani', 'Aadi', 'Avani', 'Purattasi', 
+  'Aippasi', 'Karthigai', 'Margazhi', 'Thai', 'Maasi', 'Panguni'
 ];
 
 export default function Reminders() {
@@ -109,6 +114,13 @@ export default function Reminders() {
 
   const openAddModal = () => {
     setSelectedSub(null);
+    setShowModal(true);
+  };
+
+  const openCloneModal = (rem: Reminder) => {
+    // Clone the reminder data, but generate a new ID and clear 'Next Payment' if it's a past date
+    const clonedReminder = { ...rem, id: '', 'Next Payment': new Date().toISOString().split('T')[0] }; // Reset date to today for new clone
+    setSelectedSub(clonedReminder);
     setShowModal(true);
   };
 
@@ -243,8 +255,10 @@ export default function Reminders() {
                 />
               </th>
               {renderSortableHeader('Name', 'Name')}
-              {renderSortableHeader('Next Payment', 'Next Payment')}
+              {renderSortableHeader('Next Payment', 'Next Reminder')}
+              {renderSortableHeader('Repeat', 'Repeat')}
               {renderSortableHeader('Category', 'Category')}
+              {renderSortableHeader('Source', 'Source')}
               <th className="py-3 text-muted small text-uppercase">Status</th>
               <th className="py-3 text-muted small text-uppercase text-end pe-4">Actions</th>
             </tr>
@@ -269,11 +283,29 @@ export default function Reminders() {
                     <span className="fw-medium">{rem.Name}</span>
                   </div>
                 </td>
-                <td className="small text-muted">{rem['Next Payment']}</td>
+                <td className="small text-muted">
+                  {rem['Next Payment']}
+                  {rem.tamilMonthIndex !== undefined && rem.tamilDay !== undefined && (
+                    <div className="small text-info">
+                      ({TAMIL_MONTH_NAMES[rem.tamilMonthIndex]} {rem.tamilDay})
+                    </div>
+                  )}
+                </td>
+                <td className="small text-muted">
+                  {rem.Repeat}
+                </td>
                 <td>
                   <Badge className="bg-info-remtle text-info-emphasis border border-info-remtle rounded-pill fw-medium px-3">
                     {rem.Category}
                   </Badge>
+                  {rem.HolidayType && (
+                    <Badge bg="info" className="rounded-pill fw-medium px-3 ms-2">
+                      {rem.HolidayType}
+                    </Badge>
+                  )}
+                </td>
+                <td className="small text-muted">
+                  {rem.Source || 'N/A'}
                 </td>
                 <td>
                   <Badge bg={rem.Active === 'Yes' ? 'success' : 'secondary'} className="rounded-pill">
@@ -284,6 +316,9 @@ export default function Reminders() {
                   <Stack direction="horizontal" gap={2} className="justify-content-end">
                     <Button variant="link" className="text-muted p-0 hover-opacity-75" onClick={() => openEditModal(rem)}>
                       <Edit2 size={16} />
+                    </Button>
+                    <Button variant="link" className="text-muted p-0 hover-opacity-75" onClick={() => openCloneModal(rem)}>
+                      <Copy size={16} />
                     </Button>
                     <Button variant="link" className="text-danger p-0 hover-opacity-75" onClick={() => handleDelete(rem.id)}>
                       <Trash2 size={16} />

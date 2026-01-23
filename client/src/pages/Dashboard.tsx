@@ -4,7 +4,7 @@ import axios from 'axios';
 import { Card, Container, Row, Col, Badge, Spinner, Button, Form, InputGroup } from 'react-bootstrap';
 import { CheckCircle, PlusCircle, Clock, CalendarX } from 'lucide-react';
 import { format, parseISO, differenceInDays } from 'date-fns';
-import type { DashboardData, Reminder } from '../types';
+import type { DashboardData, Reminder, Settings } from '../types';
 
 interface ConversationTurn {
   role: 'user' | 'assistant';
@@ -17,10 +17,25 @@ export default function Dashboard() {
   const [nlReminderText, setNlReminderText] = useState('');
   const [nlReminderLoading, setNlReminderLoading] = useState(false);
   const [aiConversation, setAiConversation] = useState<ConversationTurn[]>([]);
+  const [settings, setSettings] = useState<Settings | null>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
-    fetchData();
+    const fetchInitialData = async () => {
+      try {
+        const [remindersRes, settingsRes] = await Promise.all([
+          axios.get('/api/reminders'),
+          axios.get('/api/settings')
+        ]);
+        setData(remindersRes.data);
+        setSettings(settingsRes.data);
+      } catch (err) {
+        console.error("Failed to fetch initial data", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchInitialData();
   }, []);
 
   const fetchData = async () => {
@@ -33,12 +48,9 @@ export default function Dashboard() {
       setLoading(false);
     }
   };
-
+  
   const handleMarkPaid = async (id: string) => {
     try {
-      // For a non-financial reminder app, "Mark as Paid" is now "Mark as Done"
-      // which can be implemented by simply deleting the reminder.
-      // A more sophisticated approach could be to move it to a "completed" list.
       if (window.confirm('Mark this reminder as done? This will remove it from the list.')) {
         await axios.delete(`/api/reminders/${id}`);
         fetchData();
@@ -52,8 +64,7 @@ export default function Dashboard() {
     e.preventDefault();
     if (!nlReminderText.trim()) return;
 
-    const config = JSON.parse(localStorage.getItem('rem_app_config') || '{}');
-    if (!config.groqApiKey) {
+    if (!settings?.groqApiKey) {
       alert('Please set your Groq API Key in Settings first!');
       return;
     }
@@ -63,21 +74,18 @@ export default function Dashboard() {
     const userTurn: ConversationTurn = { role: 'user', content: nlReminderText };
     const updatedConversation = [...aiConversation, userTurn];
     
-    // Construct the full text for the AI
     const textForAi = updatedConversation.map(turn => `${turn.role}: ${turn.content}`).join('\n');
 
     try {
       const res = await axios.post('/api/ai/create-reminder', {
         text: textForAi,
-        apiKey: config.groqApiKey
+        model: settings.groqModel || undefined
       });
 
       if (res.data.question) {
-        // AI is asking a question
         setAiConversation([...updatedConversation, { role: 'assistant', content: res.data.question }]);
         setNlReminderText('');
       } else {
-        // AI created a reminder
         const newReminder = res.data;
         alert('AI has successfully created your reminder!');
         setAiConversation([]);
@@ -85,9 +93,7 @@ export default function Dashboard() {
         navigate('/reminders', { state: { newReminderId: newReminder.id } });
       }
     } catch (err: any) {
-      alert(err.response?.data?.error || 'Failed to create reminder via AI');
-      // Optionally reset conversation on error
-      // setAiConversation([]);
+      alert(err.response?.data?.error);
     } finally {
       setNlReminderLoading(false);
     }

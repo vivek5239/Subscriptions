@@ -95,6 +95,7 @@ function AppLayout({ children }: { children: React.ReactNode }) {
 }
 
 function App() {
+  // Dummy change to trigger a new build
   return (
     <BrowserRouter>
       <Routes>

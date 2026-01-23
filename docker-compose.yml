@@ -9,6 +9,6 @@ services:
     ports:
       - "5006:5000"
     volumes:
-      - ./data:/data
+      - ./data:/app/data
     environment:
       - PORT=5000

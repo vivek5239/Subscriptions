@@ -29,4 +29,4 @@ ENV NODE_ENV=production
 
 EXPOSE 5000
 
-CMD ["node", "index.js"]
+CMD ["node", "/app/server/index.js"]

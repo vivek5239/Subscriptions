@@ -8,6 +8,8 @@ import { useTheme, type ThemeColor } from '../context/ThemeContext';
 export default function SettingsView() {
   const [config, setConfig] = useState<Settings>({
     groqApiKey: '',
+    groqModel: '',
+    calendarificApiKey: '',
     gotifyUrl: '',
     gotifyToken: '',
     smtpHost: '',
@@ -25,6 +27,8 @@ export default function SettingsView() {
   const [icsFile, setIcsFile] = useState<File | null>(null);
   const [importStatus, setImportStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [importMessage, setImportMessage] = useState<string>('');
+  const [availableModels, setAvailableModels] = useState<string[]>([]);
+  const [fetchingModels, setFetchingModels] = useState(false);
 
   const colors: { id: ThemeColor; value: string; label: string }[] = [
     { id: 'purple', value: '#6366f1', label: 'Purple' },
@@ -37,6 +41,7 @@ export default function SettingsView() {
 
   useEffect(() => {
     fetchSettings();
+    fetchGroqModels();
   }, []);
 
   const fetchSettings = async () => {
@@ -47,6 +52,19 @@ export default function SettingsView() {
       }
     } catch (err) {
       console.error(err);
+    }
+  };
+
+  const fetchGroqModels = async () => {
+    setFetchingModels(true);
+    try {
+      const res = await axios.get('/api/groq/models');
+      setAvailableModels(res.data.models);
+    } catch (err) {
+      console.error('Error fetching Groq models:', err);
+      // Optionally show an alert or message to the user
+    } finally {
+      setFetchingModels(false);
     }
   };
 
@@ -117,7 +135,18 @@ export default function SettingsView() {
         if (summaryMatch && dtstartMatch) {
           const name = summaryMatch[1].trim();
           const dtStart = dtstartMatch[1];
-          const nextPayment = dtStart.length === 8 ? `${dtStart.substring(0, 4)}-${dtStart.substring(4, 6)}-${dtStart.substring(6, 8)}` : new Date(dtStart).toISOString().split('T')[0];
+          const nextPayment = dtStart.length === 8 
+                  ? `${dtStart.substring(0, 4)}-${dtStart.substring(4, 6)}-${dtStart.substring(6, 8)}` 
+                  : (() => {
+                      // Convert YYYYMMDDTHHMMSS to YYYY-MM-DDTHH:MM:SS for reliable Date parsing
+                      const year = dtStart.substring(0, 4);
+                      const month = dtStart.substring(4, 6);
+                      const day = dtStart.substring(6, 8);
+                      const time = dtStart.substring(9, 15); // HHMMSS part
+                      const formattedTime = `${time.substring(0, 2)}:${time.substring(2, 4)}:${time.substring(4, 6)}`;
+                      const isoDateString = `${year}-${month}-${day}T${formattedTime}`;
+                      return new Date(isoDateString).toISOString().split('T')[0];
+                    })();
           const notes = descriptionMatch ? descriptionMatch[1].trim() : '';
 
           reminders.push({
@@ -128,6 +157,7 @@ export default function SettingsView() {
             Active: 'Yes',
             Notes: notes,
             remindBefore: 0, // Default to remind on the day
+            Source: 'API',
           });
         }
       }
@@ -263,12 +293,54 @@ export default function SettingsView() {
                 Used for generating reminder insights and for natural language reminder creation.
               </Form.Text>
             </Form.Group>
-          </Card.Body>
-        </Card>
-
-        {/* Gotify Settings */}
-        <Card className="shadow-sm mb-4">
-          <Card.Header className="bg-transparent py-3 border-bottom-0 d-flex justify-content-between align-items-center">
+            <Form.Group className="mb-3">
+              <Form.Label>Groq AI Model</Form.Label>
+              <Form.Select 
+                value={config.groqModel || ''} // Handle undefined
+                onChange={(e) => setConfig({...config, groqModel: e.target.value})}
+                className="bg-body border-secondary border-opacity-25"
+                disabled={fetchingModels} // Disable while loading models
+              >
+                <option value="">
+                  {fetchingModels ? 'Loading models...' : 'Use default model (llama3-70b-8192)'}
+                </option>
+                {availableModels.map(model => (
+                  <option key={model} value={model}>{model}</option>
+                ))}
+              </Form.Select>
+              <Form.Text className="text-muted">
+                Select a specific model or leave blank to use the recommended default.
+              </Form.Text>
+            </Form.Group>
+                                  </Card.Body>
+                                </Card>
+                      
+                                {/* Holiday API Settings (Calendarific) */}
+                                <Card className="shadow-sm mb-4">
+                                  <Card.Header className="bg-transparent py-3 border-bottom-0 d-flex align-items-center gap-2">
+                                    <Calendar className="text-success" size={20} />
+                                    <h6 className="mb-0 fw-bold">Holiday API (Calendarific)</h6>
+                                  </Card.Header>
+                                  <Card.Body>
+                                    <Form.Group className="mb-3">
+                                      <Form.Label>Calendarific API Key</Form.Label>
+                                      <Form.Control 
+                                        type="password" 
+                                        placeholder="Enter your Calendarific API Key"
+                                        value={config.calendarificApiKey}
+                                        onChange={(e) => setConfig({...config, calendarificApiKey: e.target.value})}
+                                        className="bg-body border-secondary border-opacity-25"
+                                      />
+                                      <Form.Text className="text-muted">
+                                        Used to get accurate dates for holidays like Diwali, correcting AI suggestions.
+                                        Get a key from <a href="https://calendarific.com/" target="_blank" rel="noopener noreferrer">calendarific.com</a>.
+                                      </Form.Text>
+                                    </Form.Group>
+                                  </Card.Body>
+                                </Card>
+                      
+                                {/* Gotify Settings */}
+                                <Card className="shadow-sm mb-4">          <Card.Header className="bg-transparent py-3 border-bottom-0 d-flex justify-content-between align-items-center">
             <div className="d-flex align-items-center gap-2">
               <Bell className="text-warning" size={20} />
               <h6 className="mb-0 fw-bold">Notifications (Gotify)</h6>
