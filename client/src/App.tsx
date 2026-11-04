@@ -1,133 +1,328 @@
 import React, { useState } from 'react';
-import { BrowserRouter, Routes, Route, NavLink, Navigate, useLocation } from 'react-router-dom';
-import { Container, Nav, Navbar, Offcanvas, Button } from 'react-bootstrap';
-import { LayoutDashboard, Calendar, Settings, Menu, CreditCard, PieChart, Sun, Moon, LogOut } from 'lucide-react';
+import { BrowserRouter, Routes, Route, NavLink, Link, Navigate } from 'react-router-dom';
+import { Container, Navbar, Offcanvas, Dropdown } from 'react-bootstrap';
+import { 
+  LayoutDashboard, 
+  CreditCard, 
+  Calendar, 
+  PieChart, 
+  Settings as SettingsIcon, 
+  Menu, 
+  Sun, 
+  Moon, 
+  Sparkles,
+  Palette
+} from 'lucide-react';
 import Dashboard from './pages/Dashboard';
 import Subscriptions from './pages/Subscriptions';
 import CalendarView from './pages/CalendarView';
-import SettingsView from './pages/SettingsView';
 import StatsView from './pages/StatsView';
-import AuthPage from './pages/Auth';
-import { useTheme } from './context/ThemeContext';
-import { useAuth } from './context/AuthContext';
-
-function ProtectedRoute({ children }: { children: React.ReactElement }) {
-  const { user, isLoading } = useAuth();
-  const location = useLocation();
-
-  if (isLoading) {
-    return <div className="d-flex justify-content-center align-items-center min-vh-100">Loading...</div>;
-  }
-
-  if (!user) {
-    return <Navigate to="/auth" state={{ from: location }} replace />;
-  }
-
-  return children;
-}
+import SettingsView from './pages/SettingsView';
+import { useTheme, type ThemeColor } from './context/ThemeContext';
 
 function AppLayout({ children }: { children: React.ReactNode }) {
   const [showMenu, setShowMenu] = useState(false);
-  const { mode: theme, toggleMode: toggleTheme } = useTheme();
-  const { logout, user } = useAuth();
+  const { mode: theme, toggleMode: toggleTheme, color: currentColor, setColor } = useTheme();
+
+  const colorOptions: { id: ThemeColor; label: string; bg: string }[] = [
+    { id: 'purple', label: 'Indigo / Purple', bg: '#6366f1' },
+    { id: 'blue', label: 'Sky Blue', bg: '#3b82f6' },
+    { id: 'green', label: 'Emerald Green', bg: '#10b981' },
+    { id: 'orange', label: 'Sunset Orange', bg: '#f97316' },
+    { id: 'red', label: 'Crimson Red', bg: '#ef4444' },
+    { id: 'slate', label: 'Cool Slate', bg: '#64748b' },
+  ];
 
   return (
-    <div className="min-vh-100 d-flex flex-column">
-      {/* Navigation Bar */}
-      <Navbar expand="lg" className="shadow sticky-top bg-gradient-primary navbar-dark py-3">
-        <Container fluid>
+    <div className="min-vh-100 d-flex flex-column" style={{ background: 'var(--bs-body-bg)' }}>
+      {/* Modern Sticky Navigation Bar */}
+      <Navbar 
+        expand="lg" 
+        className="sticky-top border-bottom py-2 shadow-sm"
+        style={{ 
+          backgroundColor: theme === 'dark' ? 'rgba(15, 23, 42, 0.85)' : 'rgba(255, 255, 255, 0.85)',
+          backdropFilter: 'blur(16px)',
+          WebkitBackdropFilter: 'blur(16px)',
+          borderColor: 'var(--bs-border-color)'
+        }}
+      >
+        <Container fluid="xl" className="px-3 px-sm-4">
           <div className="d-flex align-items-center justify-content-between w-100">
+            {/* Left: Brand & Mobile Toggle */}
             <div className="d-flex align-items-center gap-3">
               <button 
-                className="btn btn-link text-white p-0 border-0" 
+                className="btn btn-link text-body p-1 d-lg-none border-0 shadow-none" 
                 onClick={() => setShowMenu(true)}
+                aria-label="Open navigation menu"
               >
-                <Menu size={28} />
+                <Menu size={24} />
               </button>
-              <Navbar.Brand className="d-flex align-items-center gap-2 fw-bold fs-4" href="/">
-                <CreditCard size={28} />
-                Subscriptions
-              </Navbar.Brand>
+
+              <Link to="/" className="text-decoration-none d-flex align-items-center gap-2">
+                <div 
+                  className="d-flex align-items-center justify-content-center rounded-3 p-2" 
+                  style={{
+                    background: 'var(--primary-gradient)',
+                    color: '#fff',
+                    boxShadow: '0 4px 12px rgba(99, 102, 241, 0.35)'
+                  }}
+                >
+                  <CreditCard size={20} className="text-white" />
+                </div>
+                <div>
+                  <div className="d-flex align-items-center gap-2">
+                    <span className="fw-bold fs-5 text-body tracking-tight">Subscriptions</span>
+                    <span 
+                      className="badge rounded-pill text-white" 
+                      style={{ background: 'var(--primary-gradient)', fontSize: '0.65rem' }}
+                    >
+                      v2.2
+                    </span>
+                  </div>
+                  <div className="d-none d-sm-flex align-items-center gap-1 text-muted" style={{ fontSize: '0.7rem' }}>
+                    <Sparkles size={11} className="text-primary" />
+                    <span>Powered by Gemini AI</span>
+                  </div>
+                </div>
+              </Link>
             </div>
-            
-            <div className="d-flex align-items-center gap-3">
-              <Button 
-                variant="link" 
-                className="text-white p-0 border-0 shadow-none d-flex align-items-center gap-2 text-decoration-none fw-medium" 
-                onClick={toggleTheme}
-                title={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
+
+            {/* Center: Desktop Navigation Links */}
+            <div className="d-none d-lg-flex align-items-center gap-1 bg-body-tertiary p-1 rounded-pill border">
+              <NavLink 
+                to="/" 
+                end
+                className={({ isActive }) => 
+                  `btn btn-sm rounded-pill px-3 py-1 fw-medium text-decoration-none d-flex align-items-center gap-2 transition-all ${
+                    isActive 
+                      ? 'btn-primary text-white shadow-sm' 
+                      : 'text-body-secondary btn-link text-decoration-none'
+                  }`
+                }
               >
-                {theme === 'light' ? <Moon size={20} /> : <Sun size={20} />}
-                <span className="d-none d-sm-inline">{theme === 'light' ? 'Dark' : 'Light'} Mode</span>
-              </Button>
+                <LayoutDashboard size={16} />
+                <span>Dashboard</span>
+              </NavLink>
+
+              <NavLink 
+                to="/subscriptions" 
+                className={({ isActive }) => 
+                  `btn btn-sm rounded-pill px-3 py-1 fw-medium text-decoration-none d-flex align-items-center gap-2 transition-all ${
+                    isActive 
+                      ? 'btn-primary text-white shadow-sm' 
+                      : 'text-body-secondary btn-link text-decoration-none'
+                  }`
+                }
+              >
+                <CreditCard size={16} />
+                <span>All Subscriptions</span>
+              </NavLink>
+
+              <NavLink 
+                to="/calendar" 
+                className={({ isActive }) => 
+                  `btn btn-sm rounded-pill px-3 py-1 fw-medium text-decoration-none d-flex align-items-center gap-2 transition-all ${
+                    isActive 
+                      ? 'btn-primary text-white shadow-sm' 
+                      : 'text-body-secondary btn-link text-decoration-none'
+                  }`
+                }
+              >
+                <Calendar size={16} />
+                <span>Calendar</span>
+              </NavLink>
+
+              <NavLink 
+                to="/stats" 
+                className={({ isActive }) => 
+                  `btn btn-sm rounded-pill px-3 py-1 fw-medium text-decoration-none d-flex align-items-center gap-2 transition-all ${
+                    isActive 
+                      ? 'btn-primary text-white shadow-sm' 
+                      : 'text-body-secondary btn-link text-decoration-none'
+                  }`
+                }
+              >
+                <PieChart size={16} />
+                <span>Analytics</span>
+              </NavLink>
+
+              <NavLink 
+                to="/settings" 
+                className={({ isActive }) => 
+                  `btn btn-sm rounded-pill px-3 py-1 fw-medium text-decoration-none d-flex align-items-center gap-2 transition-all ${
+                    isActive 
+                      ? 'btn-primary text-white shadow-sm' 
+                      : 'text-body-secondary btn-link text-decoration-none'
+                  }`
+                }
+              >
+                <SettingsIcon size={16} />
+                <span>Settings</span>
+              </NavLink>
+            </div>
+
+            {/* Right: Quick Actions & Appearance Tools */}
+            <div className="d-flex align-items-center gap-2">
+              {/* Color Accent Picker */}
+              <Dropdown align="end">
+                <Dropdown.Toggle 
+                  variant="link" 
+                  className="btn btn-sm btn-icon text-body p-2 border-0 shadow-none d-flex align-items-center"
+                  id="dropdown-theme-color"
+                  title="Change Theme Accent Color"
+                >
+                  <Palette size={18} />
+                </Dropdown.Toggle>
+                <Dropdown.Menu className="shadow-lg border p-2" style={{ minWidth: '180px' }}>
+                  <div className="px-2 py-1 small fw-bold text-muted text-uppercase" style={{ fontSize: '0.7rem' }}>
+                    Accent Color
+                  </div>
+                  {colorOptions.map(opt => (
+                    <Dropdown.Item 
+                      key={opt.id}
+                      onClick={() => setColor(opt.id)}
+                      className={`d-flex align-items-center justify-content-between rounded px-2 py-1 small ${
+                        currentColor === opt.id ? 'active' : ''
+                      }`}
+                    >
+                      <div className="d-flex align-items-center gap-2">
+                        <span 
+                          className="rounded-circle border" 
+                          style={{ width: 12, height: 12, backgroundColor: opt.bg }}
+                        />
+                        <span>{opt.label}</span>
+                      </div>
+                      {currentColor === opt.id && <span className="small">✓</span>}
+                    </Dropdown.Item>
+                  ))}
+                </Dropdown.Menu>
+              </Dropdown>
+
+              {/* Light/Dark Toggle */}
+              <button 
+                className="btn btn-sm btn-icon text-body p-2 rounded-circle hover-bg-theme border-0 shadow-none"
+                onClick={toggleTheme}
+                title={`Switch to ${theme === 'light' ? 'Dark' : 'Light'} Mode`}
+                aria-label="Toggle dark mode"
+              >
+                {theme === 'light' ? <Moon size={18} /> : <Sun size={18} className="text-warning" />}
+              </button>
             </div>
           </div>
         </Container>
       </Navbar>
 
-      {/* Sidebar Menu */}
-      <Offcanvas show={showMenu} onHide={() => setShowMenu(false)} style={{ width: 280 }}>
-        <Offcanvas.Header closeButton>
-          <Offcanvas.Title className="fw-bold text-primary">Menu</Offcanvas.Title>
-        </Offcanvas.Header>
-        <Offcanvas.Body className="p-0 d-flex flex-column">
-          <Nav className="flex-column p-2 flex-grow-1">
-            <div className="px-3 py-2 mb-2 text-muted small">
-              Signed in as <br/> <strong>{user?.email}</strong>
+      {/* Mobile Offcanvas Drawer */}
+      <Offcanvas 
+        show={showMenu} 
+        onHide={() => setShowMenu(false)} 
+        placement="start"
+        style={{ width: 290 }}
+      >
+        <Offcanvas.Header closeButton className="border-bottom">
+          <div className="d-flex align-items-center gap-2">
+            <div 
+              className="d-flex align-items-center justify-content-center rounded-3 p-2" 
+              style={{ background: 'var(--primary-gradient)', color: '#fff' }}
+            >
+              <CreditCard size={18} />
             </div>
+            <div>
+              <div className="fw-bold fs-6">Subscriptions</div>
+              <div className="small text-muted" style={{ fontSize: '0.7rem' }}>Gemini AI Edition</div>
+            </div>
+          </div>
+        </Offcanvas.Header>
+        <Offcanvas.Body className="p-3 d-flex flex-column justify-content-between">
+          <div className="d-flex flex-column gap-1">
             <NavLink 
               to="/" 
-              className={({ isActive }) => `nav-link d-flex align-items-center gap-3 px-3 py-3 rounded mb-1 ${isActive ? 'bg-primary text-white' : 'hover-bg-theme'}`}
+              end
+              className={({ isActive }) => 
+                `nav-link d-flex align-items-center gap-3 px-3 py-2 rounded-3 text-decoration-none ${
+                  isActive ? 'bg-primary text-white fw-bold shadow-sm' : 'text-body hover-bg-theme'
+                }`
+              }
               onClick={() => setShowMenu(false)}
             >
-              <LayoutDashboard size={20} /> Dashboard
+              <LayoutDashboard size={18} /> 
+              <span>Dashboard</span>
             </NavLink>
+
             <NavLink 
               to="/subscriptions" 
-              className={({ isActive }) => `nav-link d-flex align-items-center gap-3 px-3 py-3 rounded mb-1 ${isActive ? 'bg-primary text-white' : 'hover-bg-theme'}`}
+              className={({ isActive }) => 
+                `nav-link d-flex align-items-center gap-3 px-3 py-2 rounded-3 text-decoration-none ${
+                  isActive ? 'bg-primary text-white fw-bold shadow-sm' : 'text-body hover-bg-theme'
+                }`
+              }
               onClick={() => setShowMenu(false)}
             >
-              <CreditCard size={20} /> All Subscriptions
+              <CreditCard size={18} /> 
+              <span>All Subscriptions</span>
             </NavLink>
-            <NavLink 
-              to="/stats" 
-              className={({ isActive }) => `nav-link d-flex align-items-center gap-3 px-3 py-3 rounded mb-1 ${isActive ? 'bg-primary text-white' : 'hover-bg-theme'}`}
-              onClick={() => setShowMenu(false)}
-            >
-              <PieChart size={20} /> Statistics
-            </NavLink>
+
             <NavLink 
               to="/calendar" 
-              className={({ isActive }) => `nav-link d-flex align-items-center gap-3 px-3 py-3 rounded mb-1 ${isActive ? 'bg-primary text-white' : 'hover-bg-theme'}`}
+              className={({ isActive }) => 
+                `nav-link d-flex align-items-center gap-3 px-3 py-2 rounded-3 text-decoration-none ${
+                  isActive ? 'bg-primary text-white fw-bold shadow-sm' : 'text-body hover-bg-theme'
+                }`
+              }
               onClick={() => setShowMenu(false)}
             >
-              <Calendar size={20} /> Calendar
+              <Calendar size={18} /> 
+              <span>Calendar</span>
             </NavLink>
+
+            <NavLink 
+              to="/stats" 
+              className={({ isActive }) => 
+                `nav-link d-flex align-items-center gap-3 px-3 py-2 rounded-3 text-decoration-none ${
+                  isActive ? 'bg-primary text-white fw-bold shadow-sm' : 'text-body hover-bg-theme'
+                }`
+              }
+              onClick={() => setShowMenu(false)}
+            >
+              <PieChart size={18} /> 
+              <span>Analytics</span>
+            </NavLink>
+
             <hr className="my-2" />
+
             <NavLink 
               to="/settings" 
-              className={({ isActive }) => `nav-link d-flex align-items-center gap-3 px-3 py-3 rounded mb-1 ${isActive ? 'bg-primary text-white' : 'hover-bg-theme'}`}
+              className={({ isActive }) => 
+                `nav-link d-flex align-items-center gap-3 px-3 py-2 rounded-3 text-decoration-none ${
+                  isActive ? 'bg-primary text-white fw-bold shadow-sm' : 'text-body hover-bg-theme'
+                }`
+              }
               onClick={() => setShowMenu(false)}
             >
-              <Settings size={20} /> Settings
+              <SettingsIcon size={18} /> 
+              <span>Settings</span>
             </NavLink>
-          </Nav>
-          <div className="p-2 border-top">
-            <Button 
-              variant="outline-danger" 
-              className="w-100 d-flex align-items-center justify-content-center gap-2"
-              onClick={() => { logout(); setShowMenu(false); }}
-            >
-              <LogOut size={18} /> Logout
-            </Button>
+          </div>
+
+          <div className="pt-3 border-top">
+            <div className="d-flex align-items-center justify-content-between p-2 rounded-3 bg-body-tertiary">
+              <span className="small text-muted">Theme</span>
+              <button 
+                className="btn btn-sm btn-outline-secondary d-flex align-items-center gap-2 rounded-pill px-3"
+                onClick={toggleTheme}
+              >
+                {theme === 'light' ? <Moon size={14} /> : <Sun size={14} />}
+                <span>{theme === 'light' ? 'Dark' : 'Light'}</span>
+              </button>
+            </div>
           </div>
         </Offcanvas.Body>
       </Offcanvas>
 
-      {/* Main Content */}
-      <div className="flex-grow-1 w-100 bg-body-tertiary">
+      {/* Main App Content Viewport */}
+      <main className="flex-grow-1 w-100">
         {children}
-      </div>
+      </main>
     </div>
   );
 }
@@ -136,52 +331,15 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/auth" element={<AuthPage />} />
-        
-        <Route path="/" element={
-          <ProtectedRoute>
-            <AppLayout>
-              <Dashboard />
-            </AppLayout>
-          </ProtectedRoute>
-        } />
-        
-        <Route path="/subscriptions" element={
-          <ProtectedRoute>
-            <AppLayout>
-              <Subscriptions />
-            </AppLayout>
-          </ProtectedRoute>
-        } />
-        
-        <Route path="/stats" element={
-          <ProtectedRoute>
-            <AppLayout>
-              <StatsView />
-            </AppLayout>
-          </ProtectedRoute>
-        } />
-        
-        <Route path="/calendar" element={
-          <ProtectedRoute>
-            <AppLayout>
-              <CalendarView />
-            </AppLayout>
-          </ProtectedRoute>
-        } />
-        
-        <Route path="/settings" element={
-          <ProtectedRoute>
-            <AppLayout>
-              <SettingsView />
-            </AppLayout>
-          </ProtectedRoute>
-        } />
+        <Route path="/" element={<AppLayout><Dashboard /></AppLayout>} />
+        <Route path="/subscriptions" element={<AppLayout><Subscriptions /></AppLayout>} />
+        <Route path="/calendar" element={<AppLayout><CalendarView /></AppLayout>} />
+        <Route path="/stats" element={<AppLayout><StatsView /></AppLayout>} />
+        <Route path="/settings" element={<AppLayout><SettingsView /></AppLayout>} />
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>
   );
 }
 
 export default App;
-
-

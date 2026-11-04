@@ -9,7 +9,7 @@ services:
       - t3_proxy
       - socket_proxy
     ports:
-      - "3000:5000"
+      - "5005:5000"
     volumes:
       - $DOCKERDIR/appdata/subscriptions:/data
     environment:

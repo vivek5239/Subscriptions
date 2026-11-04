@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Container, Card, Row, Col, ListGroup, Spinner } from 'react-bootstrap';
+import { Container, Row, Col, Spinner, Button, Badge } from 'react-bootstrap';
 import Calendar from 'react-calendar';
 import 'react-calendar/dist/Calendar.css';
 import { format, parseISO, isSameDay } from 'date-fns';
+import { Calendar as CalendarIcon, CheckCircle } from 'lucide-react';
 import type { Subscription } from '../types';
 import { Logo } from '../components/Logo';
 
@@ -13,193 +14,182 @@ export default function CalendarView() {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
 
   useEffect(() => {
-    fetchData();
+    fetchSubscriptions();
   }, []);
 
-  const fetchData = async () => {
+  const fetchSubscriptions = async () => {
     try {
       const res = await axios.get('/api/subscriptions');
-      setSubscriptions(res.data.subscriptions);
+      setSubscriptions(res.data.subscriptions || []);
     } catch (err) {
-      console.error(err);
+      console.error('[Calendar] Error fetching:', err);
     } finally {
       setLoading(false);
     }
   };
 
-    const getTileContent = ({ date, view }: { date: Date, view: string }) => {
+  const handleMarkPaid = async (id: string) => {
+    try {
+      await axios.post(`/api/subscriptions/${id}/pay`);
+      await fetchSubscriptions();
+    } catch (err) {
+      console.error('Error marking as paid:', err);
+    }
+  };
 
-      if (view === 'month') {
-
-        const daySubs = subscriptions.filter(sub => 
-
-          sub['Next Payment'] && isSameDay(parseISO(sub['Next Payment']), date)
-
-        );
-
-        if (daySubs.length > 0) {
-
-          return (
-
-            <div className="calendar-tile-content">
-
-              {daySubs.map(sub => (
-
-                <div key={sub.id} className="tile-subscription-item">
-
-                  <span className="tile-sub-name text-truncate">{sub.Name}</span>
-
-                  <span className="tile-sub-price small">{sub.Price.split(' ')[0]}</span>
-
-                </div>
-
-              ))}
-
-            </div>
-
-          );
-
+  const getTileContent = ({ date, view }: { date: Date; view: string }) => {
+    if (view === 'month') {
+      const daySubs = subscriptions.filter(sub => {
+        if (!sub['Next Payment'] || sub.Active !== 'Yes') return false;
+        try {
+          return isSameDay(parseISO(sub['Next Payment']), date);
+        } catch {
+          return false;
         }
+      });
 
+      if (daySubs.length > 0) {
+        return (
+          <div className="calendar-tile-content">
+            {daySubs.slice(0, 2).map(sub => (
+              <div key={sub.id} className="tile-subscription-item">
+                <span className="text-truncate">{sub.Name}</span>
+                <span className="fw-bold">{sub.Price}</span>
+              </div>
+            ))}
+            {daySubs.length > 2 && (
+              <div className="small text-muted text-center" style={{ fontSize: '0.6rem' }}>
+                +{daySubs.length - 2} more
+              </div>
+            )}
+          </div>
+        );
       }
+    }
+    return null;
+  };
 
-      return null;
+  const selectedDaySubs = subscriptions.filter(sub => {
+    if (!sub['Next Payment']) return false;
+    try {
+      return isSameDay(parseISO(sub['Next Payment']), selectedDate);
+    } catch {
+      return false;
+    }
+  });
 
-    };
-
-  
-
-    const selectedDaySubs = subscriptions.filter(sub => 
-
-      sub['Next Payment'] && isSameDay(parseISO(sub['Next Payment']), selectedDate)
-
-    );
-
-  
-
-    if (loading) return <Spinner animation="border" className="m-5" />;
-
-  
-
+  if (loading) {
     return (
-      <Container className="py-4">
-        <h4 className="mb-4 fw-bold">Payment Calendar</h4>
-        <Row className="g-4">
-          <Col lg={8}>
-            <Card className="shadow-sm p-3 overflow-hidden">
-              <Calendar 
-                onChange={(val) => setSelectedDate(val as Date)} 
-                value={selectedDate}
-                tileContent={getTileContent}
-                className="w-100 border-0"
-              />
-            </Card>
-          </Col>
-          <Col lg={4}>
-            <Card className="shadow-sm h-100">
-              <Card.Header className="bg-transparent py-3 border-bottom-0">
-                <h6 className="mb-0 fw-bold">Payments on {format(selectedDate, 'MMMM dd, yyyy')}</h6>
-              </Card.Header>
-              <ListGroup variant="flush">
-                {selectedDaySubs.length > 0 ? (
-                  selectedDaySubs.map(sub => (
-                    <ListGroup.Item key={sub.id} className="py-3 bg-transparent border-0 border-bottom">
-                      <div className="d-flex justify-content-between align-items-center mb-1">
-                        <div className="d-flex align-items-center">
-                          <Logo name={sub.Name} url={sub.URL} manualLogo={sub.ManualLogo} />
-                          <span className="fw-medium text-truncate" style={{ maxWidth: '120px' }}>{sub.Name}</span>
-                        </div>
-                        <span className="fw-bold small">{sub.Price}</span>
-                      </div>
-                    </ListGroup.Item>
-                  ))
-                ) : (
-                  <div className="p-4 text-center text-muted">
-                    No payments scheduled.
-                  </div>
-                )}
-              </ListGroup>
-            </Card>
-          </Col>
-        </Row>
-  
-        <style>{`
-          .react-calendar {
-            width: 100% !important;
-            font-family: inherit;
-            border: none !important;
-            background: transparent !important;
-          }
-          .react-calendar__month-view__days__day {
-            height: 100px !important;
-            display: flex !important;
-            flex-direction: column !important;
-            align-items: flex-start !important;
-            justify-content: flex-start !important;
-            padding: 8px !important;
-            border: 1px solid var(--bs-border-color-translucent) !important;
-          }
-          .react-calendar__tile--active {
-            background: var(--bs-primary-bg-subtle) !important;
-            color: var(--bs-primary-text-emphasis) !important;
-            font-weight: bold;
-          }
-          .react-calendar__tile--now {
-            background: var(--bs-warning-bg-subtle) !important;
-          }
-          .calendar-tile-content {
-            width: 100%;
-            overflow: hidden;
-            margin-top: 4px;
-          }
-          .tile-subscription-item {
-            background: var(--bs-primary);
-            color: white;
-            font-size: 10px;
-            padding: 2px 4px;
-            border-radius: 4px;
-            margin-bottom: 2px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            white-space: nowrap;
-            overflow: hidden;
-            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
-          }
-          .tile-sub-name {
-            flex: 1;
-            margin-right: 4px;
-          }
-          .tile-sub-price {
-            font-weight: bold;
-            opacity: 0.9;
-          }
-          .react-calendar__navigation button {
-            font-weight: bold;
-            font-size: 1.1rem;
-            color: var(--bs-body-color);
-          }
-          .react-calendar__month-view__weekdays {
-            text-transform: uppercase;
-            font-weight: bold;
-            font-size: 0.75rem;
-            color: var(--bs-secondary-color);
-          }
-          .react-calendar__month-view__weekdays__weekday {
-            padding: 10px 0;
-          }
-          .react-calendar__tile:disabled {
-            background-color: var(--bs-tertiary-bg) !important;
-            opacity: 0.5;
-          }
-          [data-bs-theme='dark'] .react-calendar__tile:enabled:hover,
-          [data-bs-theme='dark'] .react-calendar__tile:enabled:focus {
-            background-color: var(--bs-tertiary-bg) !important;
-          }
-        `}</style>
+      <Container className="py-5 text-center">
+        <Spinner animation="border" variant="primary" />
+        <div className="mt-3 text-muted">Loading calendar...</div>
       </Container>
     );
-
   }
 
-  
+  return (
+    <Container fluid="xl" className="py-4 px-3 px-sm-4">
+      {/* Title */}
+      <div className="mb-4">
+        <h3 className="fw-bold mb-1 tracking-tight">Payment Calendar</h3>
+        <p className="text-muted small mb-0">
+          Monthly timeline of upcoming and scheduled recurring payments.
+        </p>
+      </div>
+
+      <Row className="g-4">
+        {/* Calendar Grid */}
+        <Col lg={8}>
+          <div className="glass-panel p-3 p-md-4">
+            <Calendar 
+              onChange={(val) => setSelectedDate(val as Date)} 
+              value={selectedDate}
+              tileContent={getTileContent}
+              className="w-100"
+            />
+          </div>
+        </Col>
+
+        {/* Selected Date Details Panel */}
+        <Col lg={4}>
+          <div className="glass-panel p-4 h-100 d-flex flex-column justify-content-between">
+            <div>
+              <div className="d-flex align-items-center justify-content-between border-bottom pb-3 mb-3">
+                <div className="d-flex align-items-center gap-2">
+                  <CalendarIcon size={18} className="text-primary" />
+                  <h6 className="fw-bold mb-0">
+                    {format(selectedDate, 'MMMM dd, yyyy')}
+                  </h6>
+                </div>
+                <Badge bg="primary-subtle" className="text-primary rounded-pill">
+                  {selectedDaySubs.length} due
+                </Badge>
+              </div>
+
+              {selectedDaySubs.length === 0 ? (
+                <div className="text-center py-5 text-muted small">
+                  <p className="mb-1">No payments due on this date.</p>
+                  <span className="text-secondary opacity-75">Click on a date to see scheduled payments.</span>
+                </div>
+              ) : (
+                <div className="d-flex flex-column gap-2">
+                  {selectedDaySubs.map(sub => (
+                    <div 
+                      key={sub.id} 
+                      className="p-3 rounded-3 border bg-body-tertiary d-flex align-items-center justify-content-between shadow-sm"
+                    >
+                      <div className="d-flex align-items-center gap-2 text-truncate me-2">
+                        <Logo name={sub.Name} url={sub.URL} manualLogo={sub.ManualLogo} size={32} />
+                        <div className="text-truncate">
+                          <div className="fw-semibold text-truncate">{sub.Name}</div>
+                          <div className="small text-muted">{sub.Category} • {sub['Payment Cycle']}</div>
+                        </div>
+                      </div>
+
+                      <div className="d-flex align-items-center gap-2">
+                        <span className="fw-bold fs-6">{sub.Price}</span>
+                        {sub.Active === 'Yes' && (
+                          <Button
+                            variant="outline-success"
+                            size="sm"
+                            className="p-1 rounded-circle d-flex align-items-center justify-content-center"
+                            style={{ width: 24, height: 24 }}
+                            title="Mark as Paid"
+                            onClick={() => handleMarkPaid(sub.id)}
+                          >
+                            <CheckCircle size={13} />
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="mt-4 pt-3 border-top text-muted small">
+              Total for selected date:{' '}
+              <span className="fw-bold text-body">
+                ₹{selectedDaySubs.reduce((acc, s) => acc + (s.valueINR || 0), 0).toLocaleString('en-IN')}
+              </span>
+            </div>
+          </div>
+        </Col>
+      </Row>
+
+      <style>{`
+        .react-calendar__month-view__days__day {
+          height: 90px !important;
+          display: flex !important;
+          flex-direction: column !important;
+          align-items: flex-start !important;
+          justify-content: flex-start !important;
+          padding: 6px !important;
+          border: 1px solid var(--bs-border-color-translucent) !important;
+          border-radius: 8px !important;
+          margin: 1px;
+        }
+      `}</style>
+    </Container>
+  );
+}

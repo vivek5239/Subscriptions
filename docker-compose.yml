@@ -12,3 +12,4 @@ services:
       - ./data:/data
     environment:
       - PORT=5000
+      - TZ=Asia/Kolkata

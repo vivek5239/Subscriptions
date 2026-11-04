@@ -5,11 +5,13 @@ node_modules
 
 # Testing
 coverage
+.playwright-mcp/
 
 # Production
 build
 dist
 out
+server/public/
 
 # Misc
 .DS_Store
@@ -35,3 +37,6 @@ docker-compose.override.yml
 
 # Data
 data/
+
+.gemini/
+gha-creds-*.json
